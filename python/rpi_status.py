@@ -5,7 +5,7 @@
 import os
 import vcgencmd as vc
 import RPi.GPIO as gpio
-from bottle import route, run, template
+from bottle import Bottle, route, run, template
 from datetime import datetime
 
 vccmd = vc.Vcgencmd()
@@ -13,7 +13,7 @@ vccmd = vc.Vcgencmd()
 def get_temp():
     temp_C = vccmd.measure_temp()
     temp_F = temp_C * 9./5. +32.0
-    return "CPU TEMP{:0.2f} deg C, {:0.2f} deg F".\
+    return "CPU TEMP: {:0.2f} deg C, {:0.2f} deg F".\
             format(temp_C, temp_F)
 
 def get_time():
@@ -53,17 +53,18 @@ def get_processes(num=5):
         txt.append(process)
     return txt
 
+app = Bottle()
 
-@route('/')
-def index(nn='RPi Status:'):
+@app.route('/')
+def index(nn='raspberry pi 4 status:'):
     dt = get_time()
     tc = get_temp()
     up = get_uptime()
     fr = get_freq()
     la = get_load_average()
-    pr = get_processes(3) # very klugey how this handled at present
+    pr = get_processes(5) # very klugey how this handled at present
     return template('<b>' +\
-                    '<p>{{nn}}</p>' +\
+                    '<p>{{nn.title()}}</p>' +\
                     '<p>{{dt}}</p>' +\
                     '<p>{{tc}}</p>' +\
                     '<p>{{up}}</p>' +\
@@ -73,6 +74,8 @@ def index(nn='RPi Status:'):
                     '<p>{{p1}}</p>' +\
                     '<p>{{p2}}</p>' +\
                     '<p>{{p3}}</p>' +\
+                    '<p>{{p4}}</p>' +\
+                    '<p>{{p5}}</p>' +\
                     '</b>',
                     nn=nn, 
                     dt=dt, 
@@ -84,6 +87,8 @@ def index(nn='RPi Status:'):
                     p1=pr[1],
                     p2=pr[2],
                     p3=pr[3],
+                    p4=pr[4],
+                    p5=pr[5],
                    )
 
-run(host='0.0.0.0', port=80)
+app.run(host='0.0.0.0', port=80)
