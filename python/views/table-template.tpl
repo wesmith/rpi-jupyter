@@ -2,16 +2,16 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>Table template</title>
+    <title>Table Template</title>
     <link href="minimal-table.css" rel="stylesheet" type="text/css">
   </head>
   <body>
-    <h1>{{name}}</h1>
+    <h2>{{name}}</h2>
       
     <table>
       <tr>
         <td>&nbsp;</td>
-        <td>USER</td>
+        <td>USER hello</td>
         <td>ID</td>
         <td>%CPU</td>
         <td>START</td>

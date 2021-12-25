@@ -5,7 +5,7 @@
 import os
 import vcgencmd as vc
 import RPi.GPIO as gpio
-from bottle import Bottle, route, run, template
+from bottle import Bottle, route, run, template, debug
 from datetime import datetime
 
 vccmd = vc.Vcgencmd()
@@ -30,16 +30,17 @@ def get_uptime():
 
 def get_freq(obj='arm'):
     # obj = arm, core
-    return "FREQ of '{}': {} GHz".\
+    return "FREQ of '{}': {:0.3f} GHz".\
         format(obj, vccmd.measure_clock(obj)/1.e9)
-
-def get_processes(num=5):
+'''
+def get_processes(num=5): # this version returns a text block
     # see unix.stackexchange.com #13968 : sorting on cpu%
     # top result is the header, so get n + 1
     cmd = '/bin/ps aux --sort=-pcpu | head -n {}'.format(num + 1)
     dd  = os.popen(cmd)
     txt = dd.read()
-    out = [k.split() for k in txt.split('\n')]
+    # [:-1] gets rid of empty list after last \n
+    out = [k.split() for k in txt.split('\n')][:-1]
     fields = [0, 1, 2, 3, 8, 9, 10] # limit the output fields
     txt = []
     header = ''
@@ -52,11 +53,38 @@ def get_processes(num=5):
             process += out[j][k].split('/')[-1] + '\t'
         txt.append(process)
     return txt
+'''
+def get_processes(num=5): # this version returns a list of lists
+    # see unix.stackexchange.com #13968 : sorting on cpu%
+    # top result is the header, so get n + 1
+    cmd = '/bin/ps aux --sort=-pcpu | head -n {}'.format(num + 1)
+    dd  = os.popen(cmd)
+    txt = dd.read()
+    # [:-1] gets rid of empty list after last \n
+    out = [k.split() for k in txt.split('\n')][:-1]
+    fields = [0, 1, 2, 3, 8, 9, 10] # limit the output fields
+    short = []
+    for j in range(len(out)): # split affects only the last field
+        short.append([out[j][k].split('/')[-1] for k in fields])
+    return short
+
+fns = [get_temp, get_time, get_load_average, get_uptime, get_freq]
 
 app = Bottle()
 
+nproc = 10
+
 @app.route('/')
-def index(nn='raspberry pi 4 status:'):
+def index():
+    dd1 = [k() for k in fns]
+    dd2 = get_processes(nproc)
+    return template('views/table-template-2.tpl', 
+                    name1='Raspberry Pi 4 Status:',
+                    name2='Top {} Processes:'.format(nproc), 
+                    list=dd1, table=dd2)
+
+
+'''def index(nn='raspberry pi 4 status:'):
     dt = get_time()
     tc = get_temp()
     up = get_uptime()
@@ -90,5 +118,13 @@ def index(nn='raspberry pi 4 status:'):
                     p4=pr[4],
                     p5=pr[5],
                    )
+'''
 
-app.run(host='0.0.0.0', port=80)
+# note: template changes take effect without stopping the server
+debug(True) # turn off in production env
+
+# reloader = True: will automatically detect changes in this script
+# and rerun the new version wnen it is called again by the browser:
+# no need to stop/restart the browser 
+
+app.run(host='0.0.0.0', port=80, reloader=True)
