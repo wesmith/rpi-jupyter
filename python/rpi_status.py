@@ -13,25 +13,25 @@ vccmd = vc.Vcgencmd()
 def get_temp():
     temp_C = vccmd.measure_temp()
     temp_F = temp_C * 9./5. +32.0
-    return "CPU TEMP: {:0.2f} deg C, {:0.2f} deg F".\
-            format(temp_C, temp_F)
+    return ["CPU TEMP", "{:0.2f} deg C, {:0.2f} deg F".\
+            format(temp_C, temp_F)]
 
 def get_time():
-    return "TIME: {:%Y-%m-%d %H:%M:%S}".format(datetime.now())
+    return ["TIME", "{:%Y-%m-%d %H:%M:%S}".format(datetime.now())]
 
 def get_load_average():
     one, five, fifteen = os.getloadavg()
-    return "PROCESS AVERAGES: {} (1m), {} (5m), {} (15m)".\
-            format(one, five, fifteen)
+    return ["PROCESS AVERAGES", "{} (1m), {} (5m), {} (15m)".\
+            format(one, five, fifteen)]
 
 def get_uptime():
     dd = os.popen('/usr/bin/uptime -p')
-    return "UPTIME: {}".format(dd.read()[3:-1])
+    return ["UPTIME", "{}".format(dd.read()[3:-1])]
 
 def get_freq(obj='arm'):
     # obj = arm, core
-    return "FREQ of '{}': {:0.3f} GHz".\
-        format(obj, vccmd.measure_clock(obj)/1.e9)
+    return ["FREQ of '{}'".format(obj), 
+            "{:0.3f} GHz".format(vccmd.measure_clock(obj)/1.e9)]
 '''
 def get_processes(num=5): # this version returns a text block
     # see unix.stackexchange.com #13968 : sorting on cpu%
@@ -68,7 +68,7 @@ def get_processes(num=5): # this version returns a list of lists
         short.append([out[j][k].split('/')[-1] for k in fields])
     return short
 
-fns = [get_temp, get_time, get_load_average, get_uptime, get_freq]
+fns = [get_time, get_temp, get_load_average, get_uptime, get_freq]
 
 app = Bottle()
 
@@ -81,7 +81,7 @@ def index():
     return template('views/table-template-2.tpl', 
                     name1='Raspberry Pi 4 Status:',
                     name2='Top {} Processes:'.format(nproc), 
-                    list=dd1, table=dd2)
+                    table1=dd1, table2=dd2)
 
 
 '''def index(nn='raspberry pi 4 status:'):
