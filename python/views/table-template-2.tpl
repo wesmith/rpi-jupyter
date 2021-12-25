@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8">
     <title>Table Template</title>
-    <link href="/home/pi/Devel/raspberry_pi/rpi-jupyter/python/static/css/minimal-table.css" rel="stylesheet" type="text/css">
+    <link href="minimal-table.css" rel="stylesheet" type="text/css">
   </head>
   <body>
     <h1>{{name1}}</h1>
