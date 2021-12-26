@@ -4,13 +4,13 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>Table Template</title>
-    <link href="minimal-table.css" rel="stylesheet" type="text/css">
+    <title>{{name1}}</title>
+    <link href="/static/minimal-table.css" rel="stylesheet" type="text/css">
   </head>
   <body>
     <h1>{{name1}}</h1>
     
-        <table border="5">
+        <table class="center">
         
         %for row in table1:
             <tr>
@@ -22,14 +22,14 @@
         
         </table>
     
-    <h2>{{name2}}</h2>
+    <h3>{{name2}}</h3>
 
-        <table border="5">
+        <table class="center">
 
         %for row in table2:
             <tr>
             %for col in row:
-                <td><h3><center>{{col}}</center></h3></td>
+                <td><h4><center>{{col}}</center></h4></td>
             %end
             </tr>
         %end
