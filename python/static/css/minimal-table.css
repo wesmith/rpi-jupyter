@@ -8,6 +8,11 @@ body {
     text-align: center;
 }
 
+button {
+    background: rgb(255, 0, 0);
+    font-size: 4.0rem;
+}
+
 h1 {
     color: rgb(255, 100, 255);
     font-size: 4.0rem;

@@ -5,9 +5,21 @@
 # run this with python3 (bottle installed with pip3):
 # 'sudo python3 led_web_control.py'
 
+# TODO:
+# - make the port number a command-line input
+# - put buttons in a table?
+# - move button formatting to the CSS sheet
 
-from bottle import Bottle, template, debug, static_file
+
+from bottle import Bottle, template, static_file, debug
 from gpiozero import LED, Button
+import os
+
+css_local_path = '/static/css'
+dd = os.popen('pwd')
+dirname  = dd.read()[:-1]
+css_path = dirname + css_local_path
+print('running from: {}\nCSS path: {}'.format(dirname, css_path))
 
 leds = [LED(18), LED(23), LED(24)] # red, green, blue
 #switch = Button(25)  #not going to implement this at present
@@ -23,14 +35,6 @@ def switch_status():
 # RPi 4 GPIO PIN MAPPING: red: 18, green: 23, blue: 24
 button_names = ['RED', 'GREEN', 'BLUE', 'CYAN', 'MAGENTA', 'YELLOW',
                 'WHITE', 'BLACK']
-
-def html_for_led(led_number):
-    i = str(led_number)
-    result = " <input type='button'" +\
-             " onClick='changed(" + i + ")'" +\
-             " value='" + button_names[led_number] + "'/>"
-             #" value='LED " + i + "'/>"
-    return result
 
 def set_color(n): # WS
     ee = [(1,0,0), (0,1,0), (0,0,1), (0,1,1), (1,0,1), (1,1,0),
@@ -49,22 +53,10 @@ def send_css(filename):
 @app.route('/')
 @app.route('/<led_num>')
 def index(led_num="n"):
-    
     # set LEDs off (value 7) upon startup
     set_color(7) if led_num == "n" else set_color(int(led_num))
-        
-    response = "<script>"
-    response += "function changed(led)"
-    response += "{"
-    response += "  window.location.href='/' + led"
-    response += "}"
-    response += "</script>"
-    
-    response += '<h1>GPIO Control</h1>'
-    #response += '<h2>Button=' + switch_status() + '</h2>'
-    response += '<h2>LEDs</h2>'
-    for k in range(8):
-        response += html_for_led(k)
-    return response
+    return template('views/led_web_template.tpl', 
+                    name='LED Remote Control',
+                    buttons=button_names)
 
 app.run(host='0.0.0.0', port=90, reloader=True) # note: port 90
