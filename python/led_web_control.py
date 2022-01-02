@@ -13,7 +13,7 @@
 
 from bottle import Bottle, template, static_file, debug
 from gpiozero import LED, Button
-import os, sys, getopt, argparse
+import os, sys, argparse
 
 
 # RPi4 GPIO pin mapping: red, green, blue
