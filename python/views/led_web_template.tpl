@@ -5,11 +5,11 @@
 
 <style>
 .button {
-  background-color: rgb(100, 100, 200);
+  background-color: transparent;
   color: rgb(250, 250, 250);
-  font-size: 60px;
-  margin: 5px 5px;
-  %#border: rgb(255, 0, 0);  %# doesn_t seem to work
+  font-size: 4rem;
+  margin: 10px 15px;
+  border: none;  %# doesn_t seem to work
 }
 </style>
 
@@ -29,14 +29,20 @@
     {window.location.href='/' + led}  
     </script>
     
-    %for j, k in enumerate(buttons):
+    <table class="center">
     
+    %for j, k in enumerate(buttons):
+        <tr>
+        <td>
         <input type='button' class='button'
           onClick='changed({{j}})' 
           value={{k}}>
-    
+        </td>
+        </tr>
     %end
     
+    </table>
+
   </body>
   
 </html>

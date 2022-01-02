@@ -63,7 +63,9 @@ def send_css(filename):
 @app.route('/<led_num>')
 def index(led_num="n"):
     txt1 = 'LED Remote Control on Port {}'.format(port)
-    txt2 = 'Red, Blue, Green LEDs connected to GPIOs {}'.format(RGB)
+    txt2 = 'R, G, B LEDs connected to GPIOs {}, {}, {}'.\
+            format(*RGB)
+    txt2 += ' (use a 680 ohm resistor for each LED)'
     # set LEDs off (value 7) upon startup
     set_color(7) if led_num == "n" else set_color(int(led_num))
     return template('views/led_web_template.tpl', 
