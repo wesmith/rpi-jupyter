@@ -1,40 +1,44 @@
+#!/usr/bin/python3
+
 # led_web_control.py
 # WESmith 12/29/21
 # modified from Raspberry Pi Cookbook ed 3, ch_16_web_control.py
 # to add cyan, magenta, yellow, white, black LED patterns
 # run this with python3 (bottle installed with pip3):
-# 'sudo python3 led_web_control.py'
+# 'sudo ./led_web_control.py <port>'  will invoke python3
 
 # TODO:
-# - make the port number a command-line input
 # - put buttons in a table?
-# - move button formatting to the CSS sheet
 
 
 from bottle import Bottle, template, static_file, debug
 from gpiozero import LED, Button
-import os
+import os, sys, getopt, argparse
 
-css_local_path = '/static/css'
-dd = os.popen('pwd')
-dirname  = dd.read()[:-1]
-css_path = dirname + css_local_path
-print('running from: {}\nCSS path: {}'.format(dirname, css_path))
 
-leds = [LED(18), LED(23), LED(24)] # red, green, blue
-#switch = Button(25)  #not going to implement this at present
+# RPi4 GPIO pin mapping: red, green, blue
+leds = [LED(18), LED(23), LED(24)]
 
-''' not implementing at present
-def switch_status():
-    if switch.is_pressed:
-        return 'Down'
-    else:
-        return 'Up'
-'''
-
-# RPi 4 GPIO PIN MAPPING: red: 18, green: 23, blue: 24
-button_names = ['RED', 'GREEN', 'BLUE', 'CYAN', 'MAGENTA', 'YELLOW',
+button_names = ['RED',   'GREEN',   'BLUE', 
+                'CYAN',  'MAGENTA', 'YELLOW',
                 'WHITE', 'BLACK']
+
+def get_port(argv):
+    txt = 'Run LED web control server'
+    parser = argparse.ArgumentParser(description=txt)
+    parser.add_argument('PORT', type=int, 
+                        help='port number for the server (required)')
+    port = parser.parse_args(argv[1:]).PORT
+    print('\nUsing PORT: {}'.format(port))
+    return port
+
+def get_css_path(css_local_path='/static/css'):
+    dd = os.popen('pwd')
+    dirname  = dd.read()[:-1]
+    css_path = dirname + css_local_path
+    print('\nRunning from: {}\n\nUsing CSS path: {}\n'.\
+          format(dirname, css_path))
+    return css_path
 
 def set_color(n): # WS
     ee = [(1,0,0), (0,1,0), (0,0,1), (0,1,1), (1,0,1), (1,1,0),
@@ -42,8 +46,12 @@ def set_color(n): # WS
     for i, k in enumerate(ee[n]):
         leds[i].on() if k==1 else leds[i].off()
 
+port = get_port(sys.argv)        
+        
+css_path = get_css_path()
+
 app = Bottle()
-# note: template changes take effect without stopping the server
+
 debug(True) # turn off in production env
 
 @app.route('/static/<filename:re:.*\.css>')
@@ -59,4 +67,15 @@ def index(led_num="n"):
                     name='LED Remote Control',
                     buttons=button_names)
 
-app.run(host='0.0.0.0', port=90, reloader=True) # note: port 90
+# note: reloader=True: template changes take effect w/o restarting the server
+app.run(host='0.0.0.0', port=port, reloader=True)
+
+
+''' NOTE: not implementing 'switch' in the template at present
+switch = Button(25)
+def switch_status():
+    if switch.is_pressed:
+        return 'Down'
+    else:
+        return 'Up'
+'''
