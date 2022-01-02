@@ -15,13 +15,14 @@
 
   <head>
     <meta charset="utf-8">
-    <title>{{name}}</title>
+    <title>{{name1}}</title>
     <link href="/static/minimal-table.css" 
      rel="stylesheet" type="text/css">
   </head>
   
   <body>
-    <h1>{{name}}</h1>
+    <h1>{{name1}}</h1>
+    <h2>{{name2}}</h2>
         
     <script>
     function changed(led)

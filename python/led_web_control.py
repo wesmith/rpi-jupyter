@@ -17,7 +17,8 @@ import os, sys, argparse
 
 
 # RPi4 GPIO pin mapping: red, green, blue
-leds = [LED(18), LED(23), LED(24)]
+RGB = [18, 23, 24]
+leds = [LED(k) for k in RGB]
 
 button_names = ['RED',   'GREEN',   'BLUE', 
                 'CYAN',  'MAGENTA', 'YELLOW',
@@ -61,10 +62,12 @@ def send_css(filename):
 @app.route('/')
 @app.route('/<led_num>')
 def index(led_num="n"):
+    txt1 = 'LED Remote Control on Port {}'.format(port)
+    txt2 = 'Red, Blue, Green LEDs connected to GPIOs {}'.format(RGB)
     # set LEDs off (value 7) upon startup
     set_color(7) if led_num == "n" else set_color(int(led_num))
     return template('views/led_web_template.tpl', 
-                    name='LED Remote Control',
+                    name1=txt1, name2=txt2,
                     buttons=button_names)
 
 # note: reloader=True: template changes take effect w/o restarting the server
