@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8">
     <title>{{name1}}</title>
-    <link href="/static/minimal-table.css" rel="stylesheet" type="text/css">
+    <link href="/static/rpi_status.css" rel="stylesheet" type="text/css">
   </head>
   <body>
     <h1>{{name1}}</h1>

@@ -116,7 +116,8 @@ def run(argv, nproc=10, fields=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
         return static_file(filename, root=css_path)
 
     # fns list includes function outputs to display
-    fns = [get_time, get_temp, get_load_average, get_uptime, get_freq]
+    fns = [get_time, get_temp, get_load_average,
+           get_uptime, get_freq]
 
     @app.route('/')
     def index():
