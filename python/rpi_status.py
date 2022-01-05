@@ -55,8 +55,8 @@ def get_freq(obj='arm'):
     return ["FREQ of '{}'".format(obj), 
             "{:0.3f} GHz".format(vccmd.measure_clock(obj)/1.e9)]
 
-def get_processes(num=5, fields=[0, 1, 2, 3, 8, 9, 10]): 
-    # this version returns a list of lists
+def get_processes_in_list(num=5, fields=[0, 1, 2, 3, 8, 9, 10]):
+    # this version returns a list of lists: use in run()
     # num    = number of processes to display
     # fields = desired field to display from 'ps aux' output
     # see unix.stackexchange.com #13968 : sorting on cpu%
@@ -73,46 +73,8 @@ def get_processes(num=5, fields=[0, 1, 2, 3, 8, 9, 10]):
         short.append([out[j][k].split('/')[-1] for k in fields])
     return short
 
-# this is where a run() function would start
-
-port = get_port()
-
-app = Bottle()
-# note: template changes take effect without stopping the server
-debug(True) # turn off in production env
-
-css_path = get_css_path()
-@app.route('/static/<filename:re:.*\.css>')
-def send_css(filename):
-    return static_file(filename, root=css_path)
-
-# FUNCTION index() inputs:
-# number of processes to display
-nproc  = 10
-# fns list includes function outputs to display
-fns = [get_time, get_temp, get_load_average, get_uptime, get_freq]
-# 'ps aux' output fields to display
-#fields = [0, 1, 2, 3, 8, 9, 10]
-fields = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-@app.route('/')
-def index():
-    dd1 = [k() for k in fns]
-    dd2 = get_processes(num=nproc, fields=fields)
-    return template('views/rpi_status_template.tpl', 
-                    name1='Raspberry Pi 4 Status on Port {}'.\
-                    format(port),
-                    name2='Top {} %CPU Processes:'.\
-                    format(nproc), 
-                    table1=dd1, table2=dd2)
-
-# reloader = True: will automatically detect changes in this script
-# and rerun the new version wnen it is called again by the browser:
-# no need to stop/restart the browser 
-app.run(host='0.0.0.0', port=port, reloader=True)
-
-
-'''
-def get_processes(num=5): # this version returns a text block
+def get_processes_in_text(num=5):
+    # this version returns a text block
     # see unix.stackexchange.com #13968 : sorting on cpu%
     # top result is the header, so get n + 1
     cmd = '/bin/ps aux --sort=-pcpu | head -n {}'.format(num + 1)
@@ -132,4 +94,47 @@ def get_processes(num=5): # this version returns a text block
             process += out[j][k].split('/')[-1] + '\t'
         txt.append(process)
     return txt
-'''
+
+
+def run(argv, nproc=10, fields=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+        debug_on=True, css_local_path='/static/css'):
+    '''
+    nproc:  number of processes to display
+    fields: 'ps aux' output fields to display (default: all fields)
+            (e.g., for a subset: fields = [0, 1, 2, 3, 8, 9, 10])
+    '''
+
+    port = get_port(argv=argv)
+
+    app = Bottle()
+
+    debug(debug_on) # turn off in production env
+
+    css_path = get_css_path(css_local_path=css_local_path)
+    @app.route('/static/<filename:re:.*\.css>')
+    def send_css(filename):
+        return static_file(filename, root=css_path)
+
+    # fns list includes function outputs to display
+    fns = [get_time, get_temp, get_load_average, get_uptime, get_freq]
+
+    @app.route('/')
+    def index():
+        dd1 = [k() for k in fns]
+        dd2 = get_processes_in_list(num=nproc, fields=fields)
+        return template('views/rpi_status_template.tpl',
+                        name1='Raspberry Pi 4 Status on Port {}'.\
+                        format(port),
+                        name2='Top {} %CPU Processes:'.\
+                        format(nproc),
+                        table1=dd1, table2=dd2)
+
+    # reloader = True: will automatically detect changes in this script
+    # and rerun the new version wnen it is called again by the browser:
+    # no need to stop/restart the browser
+    app.run(host='0.0.0.0', port=port, reloader=True)
+
+
+if __name__=="__main__":
+
+    run(sys.argv)
