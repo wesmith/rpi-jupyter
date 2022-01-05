@@ -25,10 +25,10 @@ button_names = ['RED',   'GREEN',   'BLUE',
                 'WHITE', 'BLACK']
 
 def get_port(argv):
-    txt = 'Run LED web control server'
+    txt     = 'Run LED web control server'
+    helptxt = 'port number for the server (required)'
     parser = argparse.ArgumentParser(description=txt)
-    parser.add_argument('PORT', type=int, 
-                        help='port number for the server (required)')
+    parser.add_argument('PORT', type=int, help=helptxt)
     port = parser.parse_args(argv[1:]).PORT
     print('\nUsing PORT: {}'.format(port))
     return port
@@ -42,7 +42,8 @@ def get_css_path(css_local_path='/static/css'):
     return css_path
 
 def set_color(n): # WS
-    ee = [(1,0,0), (0,1,0), (0,0,1), (0,1,1), (1,0,1), (1,1,0),
+    ee = [(1,0,0), (0,1,0), (0,0,1),
+          (0,1,1), (1,0,1), (1,1,0),
           (1,1,1), (0,0,0)] # R, G, B, C, M, Y, W, B
     for i, k in enumerate(ee[n]):
         leds[i].on() if k==1 else leds[i].off()
@@ -72,7 +73,9 @@ def index(led_num="n"):
                     name1=txt1, name2=txt2,
                     buttons=button_names)
 
-# note: reloader=True: template changes take effect w/o restarting the server
+# reloader = True: will automatically detect changes in this script
+# and rerun the new version wnen it is called again by the browser:
+# no need to stop/restart the browser
 app.run(host='0.0.0.0', port=port, reloader=True)
 
 
