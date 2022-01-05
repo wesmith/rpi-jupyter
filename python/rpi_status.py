@@ -123,7 +123,8 @@ def run(argv, nproc=10, fields=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
     def index():
         dd1 = [k() for k in fns]
         dd2 = get_processes_in_list(num=nproc, fields=fields)
-        return template('views/rpi_status_template.tpl',
+        return template('views/rpi_status.tpl',
+                        css_file='rpi_status.css',
                         name1='Raspberry Pi 4 Status on Port {}'.\
                         format(port),
                         name2='Top {} %CPU Processes:'.\
