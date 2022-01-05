@@ -7,39 +7,18 @@
 # run this with python3 (bottle installed with pip3):
 # 'sudo ./led_web_control.py <port>'  will invoke python3
 
-# TODO:
-# - put buttons in a table?
-
 
 from bottle import Bottle, template, static_file, debug
 from gpiozero import LED, Button
 import os, sys, argparse
-
+import rpi_status as ws # WS module
 
 # RPi4 GPIO pin mapping: red, green, blue
 RGB = [18, 23, 24]
 leds = [LED(k) for k in RGB]
-
 button_names = ['RED',   'GREEN',   'BLUE', 
                 'CYAN',  'MAGENTA', 'YELLOW',
                 'WHITE', 'BLACK']
-
-def get_port(argv):
-    txt     = 'Run LED web control server'
-    helptxt = 'port number for the server (required)'
-    parser = argparse.ArgumentParser(description=txt)
-    parser.add_argument('PORT', type=int, help=helptxt)
-    port = parser.parse_args(argv[1:]).PORT
-    print('\nUsing PORT: {}'.format(port))
-    return port
-
-def get_css_path(css_local_path='/static/css'):
-    dd = os.popen('pwd')
-    dirname  = dd.read()[:-1]
-    css_path = dirname + css_local_path
-    print('\nRunning from: {}\n\nUsing CSS path: {}\n'.\
-          format(dirname, css_path))
-    return css_path
 
 def set_color(n): # WS
     ee = [(1,0,0), (0,1,0), (0,0,1),
@@ -48,42 +27,38 @@ def set_color(n): # WS
     for i, k in enumerate(ee[n]):
         leds[i].on() if k==1 else leds[i].off()
 
-port = get_port(sys.argv)        
-        
-css_path = get_css_path()
+port = ws.get_port(sys.argv)
 
 app = Bottle()
 
 debug(True) # turn off in production env
 
+css_path = ws.get_css_path()
 @app.route('/static/<filename:re:.*\.css>')
 def send_css(filename):
     return static_file(filename, root=css_path)
 
+fns = [ws.get_time, ws.get_temp]
+
 @app.route('/')
 @app.route('/<led_num>')
-def index(led_num="n"):
+def index(led_num='7'): # default to 'black': all lights off
+    dd1 = [k() for k in fns]
     txt1 = 'LED Remote Control on Port {}'.format(port)
     txt2 = 'R, G, B LEDs connected to GPIOs {}, {}, {}'.\
             format(*RGB)
     txt2 += ' (use a 680 ohm resistor for each LED)'
-    # set LEDs off (value 7) upon startup
-    set_color(7) if led_num == "n" else set_color(int(led_num))
-    return template('views/led_web_template.tpl', 
+    set_color(int(led_num))
+    dd1.append(["LIGHT STATUS", button_names[int(led_num)]])
+    dd1[0][0] = 'TIME BUTTON PUSHED' # modify name from import
+    return template('views/led_web_control.tpl',
+                    css_file='led_web_control.css',
                     name1=txt1, name2=txt2,
-                    buttons=button_names)
+                    buttons=button_names,
+                    table1=dd1)
 
 # reloader = True: will automatically detect changes in this script
 # and rerun the new version wnen it is called again by the browser:
 # no need to stop/restart the browser
 app.run(host='0.0.0.0', port=port, reloader=True)
 
-
-''' NOTE: not implementing 'switch' in the template at present
-switch = Button(25)
-def switch_status():
-    if switch.is_pressed:
-        return 'Down'
-    else:
-        return 'Up'
-'''

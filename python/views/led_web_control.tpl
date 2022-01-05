@@ -1,4 +1,4 @@
-%# led_web_template.tpl: WESmith 12/29/121
+%# led_web_control.tpl: WESmith updated 01/04/22
 
 <!DOCTYPE html>
 <html>
@@ -16,7 +16,7 @@
   <head>
     <meta charset="utf-8">
     <title>{{name1}}</title>
-    <link href="/static/minimal-table.css" 
+    <link href="/static/{{css_file}}"
      rel="stylesheet" type="text/css">
   </head>
   
@@ -24,11 +24,25 @@
     <h1>{{name1}}</h1>
     <h2>{{name2}}</h2>
         
+    <br></br>
+    <table class="center">
+
+    %for row in table1:
+        <tr>
+        %for col in row:
+            <td><h2>{{col}}</h2></td>
+        %end
+        </tr>
+    %end
+
+    </table>
+
     <script>
     function changed(led)
     {window.location.href='/' + led}  
     </script>
     
+    <br></br>
     <table class="center">
     
     %for j, k in enumerate(buttons):

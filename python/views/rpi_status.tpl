@@ -1,11 +1,12 @@
-%# table-template-2.tpl: WESmith 12/24/21, table testing in bottle.py
+%# rpi_status.tpl: WESmith updated 01/04/22
 
 <!DOCTYPE html>
 <html>
   <head>
     <meta charset="utf-8">
     <title>{{name1}}</title>
-    <link href="/static/{{css_file}}" rel="stylesheet" type="text/css">
+    <link href="/static/{{css_file}}"
+    rel="stylesheet" type="text/css">
   </head>
   <body>
     <h1>{{name1}}</h1>
