@@ -1,0 +1,13 @@
+
+[Unit]
+Description=rpi_status Service
+After=multi-user.target
+
+[Service]
+User=root
+Group=root
+Type=simple
+ExecStart=/home/pi/Devel/raspberry_pi/rpi-jupyter/python/rpi_status.py 90
+
+[Install]
+WantedBy=multi-user.target
