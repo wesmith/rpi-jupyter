@@ -9,7 +9,7 @@
 ### END INIT INFO
 
 #! /bin/sh
-#! /etc/init.d/rpi_status
+#  /etc/init.d/rpi_status
 
 export HOME
 case "$1" in
