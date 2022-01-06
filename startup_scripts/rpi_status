@@ -1,0 +1,31 @@
+### BEGIN INIT INFO
+# Provides: rpi_status
+# Required-Start: $remote_fs $syslog $network
+# Required-Stop: $remote_fs $syslog $network
+# Default-Start: 2 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: show status of the Raspberry Pi 4
+# Description: show status of the Raspberry Pi 4
+### END INIT INFO
+
+#! /bin/sh
+#! /etc/init.d/rpi_status
+
+export HOME
+case "$1" in
+  start)
+    echo "Starting rpi_status server on port 90"
+    sudo /home/pi/Devel/raspberry_pi/rpi-jupyter/python/rpi_status.py 90 2>&1 &
+  ;;
+  stop)
+    PID=`ps auxwww | grep rpi_status.py | head -1 | awk '{print $2}'`
+    echo "Stopping rpi_status server with PID " $PID
+    sudo kill -9 $PID
+  ;;
+  *)
+    echo "Usage: /etc/init.d/rpi_status {start|stop}"
+    exit 1
+  ;;
+esac
+exit 0
+  

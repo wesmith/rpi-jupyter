@@ -1,0 +1,31 @@
+### BEGIN INIT INFO
+# Provides: led_web_control
+# Required-Start: $remote_fs $syslog $network
+# Required-Stop: $remote_fs $syslog $network
+# Default-Start: 2 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: control an RGB light from a web page
+# Description: control an RGB light on RPi4 GPIO pins from a web page
+### END INIT INFO
+
+#! /bin/sh
+#! /etc/init.d/led_web_control
+
+export HOME
+case "$1" in
+  start)
+    echo "Starting led_web_control server on port 92"
+    sudo /home/pi/Devel/raspberry_pi/rpi-jupyter/python/led_web_control.py 92 2>&1 &
+  ;;
+  stop)
+    PID=`ps auxwww | grep led_web_control.py | head -1 | awk '{print $2}'`
+    echo "Stopping led_web_control server with PID " $PID
+    sudo kill -9 $PID
+  ;;
+  *)
+    echo "Usage: /etc/init.d/led_web_control {start|stop}"
+    exit 1
+  ;;
+esac
+exit 0
+  
