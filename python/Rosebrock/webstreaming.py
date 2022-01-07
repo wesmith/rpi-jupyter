@@ -37,7 +37,9 @@ def index():
 	# return the rendered template
     # WS note: revisit how index.html is found: make it more
     # absolute: see rpi_status.py
-	return render_template("../views/index.tpl")
+    #abs_path = '/home/pi/Devel/raspberry_pi/rpi-jupyter/python'
+    #local_path = '/views/index.tpl'
+    return render_template("index.tpl")
 
 def detect_motion(frameCount):
 	# grab global references to the video stream, output frame,
