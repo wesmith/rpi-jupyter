@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 # webstreaming.py
 # WESmith 01/06/22
 # copied from 
