@@ -35,7 +35,7 @@ def get_paths(tpl_local_path, css_local_path):
 def get_temp():
     temp_C = vccmd.measure_temp()
     temp_F = temp_C * 9./5. + 32.0
-    txt = '{:0.2f} deg C, {:0.2f} deg F'.format(temp_C, temp_F)
+    txt = '{} deg C, {} deg F'.format(int(temp_C), int(temp_F))
     return ["CPU TEMP", txt]
 
 def get_time():
