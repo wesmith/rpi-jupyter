@@ -71,18 +71,29 @@ class MotionDetector():
 
 #filepath  = '/home/smithw/Devel/motioneyeos/captures/'
 filepath  = '/home/smithw/Devel/test_videos/'
-#filename  = 'Camera1_2022-01-25-10-52-02.mp4'
-filename  = '2022_0126_153604_100.MP4'
-#filename  = '2022_0126_160004_108.MP4'
-#filename  = '2022_0126_170004_128.MP4'
-filepath += filename
-savenam   = '{}-changes.mp4'.format(filename)
+filenames = ['Camera1_2022-01-25-10-52-02.mp4',
+    '2022_0126_153604_100.MP4',
+    '2022_0126_160004_108.MP4',
+    '2022_0126_170004_128.MP4',
+    '2022_0127_154344_264.MP4',
+    '2022_0127_154644_265.MP4',
+    '2022_0127_155844_269.MP4',
+    '2022_0127_160144_270.MP4']
 
-scale      = 0.3 # scale for processing and final video size
-fps        = 30  # frames/sec for final video size
-blur_size  = 5
-framecount = 30  # background history: about 1 sec of video at 30fps
-total      = 0
+num = 5
+
+filepath += filenames[num]
+savenam   = 'results/{}-changes.mp4'.format(filenames[num])
+
+# change-detection parameters
+scale      = 0.5 # scale for processing and final video size
+blur_size  = 3   # background blur
+framecount = 15  # background history length in frames
+tVal       =  5  # threshold for detection: 25 isn't bad
+rowFrac    = 0.9 # values to mask out changing timestamp in lower-left corner
+colFrac    = 0.3
+
+fps        = 30  # frames/sec for final video of detected change
 
 vid = cv2.VideoCapture(filepath)
 md  = MotionDetector(alpha=0.2)
@@ -97,12 +108,17 @@ print('Original Dimensions: {} x {}'.format(frame.shape[1], frame.shape[0]))
     
 # final frame size
 width  = int(frame.shape[1] * scale)
-height = int(frame.shape[0] * scale)    
+height = int(frame.shape[0] * scale)
+
+rowMask = int(rowFrac * height)
+colMask = int(colFrac * width)
 
 print('New Dimensions: {} x {}'.format(width, height))
 
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 out    = cv2.VideoWriter(savenam, fourcc, fps, (width, height))
+
+total  = 0
 
 while vid.isOpened():
     
@@ -117,14 +133,18 @@ while vid.isOpened():
   
     frame = cv2.resize(frame, (width, height), interpolation = cv2.INTER_LINEAR)
     
+    #frame[rowMask:, 0:colMask] = 0  # mask out changing timestamp
+
     #print('New Dimensions : ', frame.shape)
     
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     gray = cv2.GaussianBlur(gray, (blur_size, blur_size), 0)
     
+    gray[rowMask:, 0:colMask] = 0  # mask out changing timestamp
+
     if total > framecount:
 
-        motion = md.detect(gray)
+        motion = md.detect(gray, tVal=tVal)
 
         if motion is not None:
             (thresh, (minX, minY, maxX, maxY)) = motion
