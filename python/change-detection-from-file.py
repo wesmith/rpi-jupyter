@@ -80,89 +80,102 @@ filenames = ['Camera1_2022-01-25-10-52-02.mp4',
     '2022_0127_155844_269.MP4',
     '2022_0127_160144_270.MP4']
 
-num = 5
-
-filepath += filenames[num]
-savenam   = 'results/{}-changes.mp4'.format(filenames[num])
-
 # change-detection parameters
-scale      = 0.5 # scale for processing and final video size
-blur_size  = 3   # background blur
-framecount = 15  # background history length in frames
-tVal       =  5  # threshold for detection: 25 isn't bad
-rowFrac    = 0.9 # values to mask out changing timestamp in lower-left corner
-colFrac    = 0.3
+scale      =  0.5 # scale for processing and final video size
+blur_size  =  3   # background blur
+framecount = 15   # background history length in frames
+tVal       =  5   # threshold for detection: 25 isn't bad
+alpha      =  0.2 # weighting between current frame and background
+rowFrac    =  0.9 # values to mask out changing timestamp in lower-left corner
+colFrac    =  0.3
+skip       =  30   # overlap frames between end of one video and beginning of next
 
 fps        = 30  # frames/sec for final video of detected change
 
-vid = cv2.VideoCapture(filepath)
-md  = MotionDetector(alpha=0.2)
+start_vid  = 6
+end_vid    = 7
 
-ret, frame = vid.read() # get the first frame to get frame size
-if not ret:
-    print("Can't receive frame (stream end?). Exiting ...")
+savenam = 'results/{}-{}.mp4'.format(filenames[start_vid][0:16], filenames[end_vid][5:16])
+
+md  = MotionDetector(alpha=alpha)
+
+first_frame = True
+
+# video loop
+for num in range(start_vid, end_vid + 1): # last index is n+1
+
+    fullpath = filepath + filenames[num]
+    print('processing {}'.format(fullpath))
+    #savenam   = 'results/{}-changes.mp4'.format(filenames[num])
+
+    vid   = cv2.VideoCapture(fullpath)
+    count = 0  # initialize skip count
+    
+    if first_frame:  # first frame of first video: only visit this once
+
+        first_frame = False
+
+        ret, frame = vid.read() # get the first frame to get frame size
+        if not ret:
+            print("Can't receive frame (stream end?). Exiting ...")
+            vid.release()
+            sys.exit(0)
+
+        print('Original Dimensions: {} x {}'.format(frame.shape[1], frame.shape[0]))
+
+        # final frame size
+        width  = int(frame.shape[1] * scale)
+        height = int(frame.shape[0] * scale)
+    
+        rowMask = int(rowFrac * height)
+        colMask = int(colFrac * width)
+
+        print('New Dimensions: {} x {}'.format(width, height))
+
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        out    = cv2.VideoWriter(savenam, fourcc, fps, (width, height))
+
+        total  = 0
+
+    while vid.isOpened():
+
+        ret, frame = vid.read()
+        if not ret:
+            break  # end of input video file
+
+        # TODO: need a check that subsequent vids have same sizes, otherwise error
+
+        if count < skip:  # skip over redundant frames at beginning of video splice
+            count += 1
+            continue
+
+        frame = cv2.resize(frame, (width, height), interpolation = cv2.INTER_LINEAR)
+
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        gray = cv2.GaussianBlur(gray, (blur_size, blur_size), 0)
+
+        gray[rowMask:, 0:colMask] = 0  # mask out changing timestamp
+
+        if total > framecount:
+
+            motion = md.detect(gray, tVal=tVal)
+
+            if motion is not None:
+                (thresh, (minX, minY, maxX, maxY)) = motion
+                cv2.rectangle(frame, (minX, minY), (maxX, maxY), (0, 255, 255), 1)
+
+                # write new video file with just the frames with motion
+                out.write(frame)
+
+        md.update_background(gray)
+        total += 1
+
+        cv2.imshow('frame', frame)
+        if cv2.waitKey(1) == ord('q'):
+            break
+
     vid.release()
-    sys.exit(0)
 
-print('Original Dimensions: {} x {}'.format(frame.shape[1], frame.shape[0]))
-    
-# final frame size
-width  = int(frame.shape[1] * scale)
-height = int(frame.shape[0] * scale)
-
-rowMask = int(rowFrac * height)
-colMask = int(colFrac * width)
-
-print('New Dimensions: {} x {}'.format(width, height))
-
-fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-out    = cv2.VideoWriter(savenam, fourcc, fps, (width, height))
-
-total  = 0
-
-while vid.isOpened():
-    
-    ret, frame = vid.read()
-
-    #if not ret:
-    #    print("Can't receive frame (stream end?). Exiting ...")
-    #    break
- 
-    #width  = int(frame.shape[1] * scale)
-    #height = int(frame.shape[0] * scale)
-  
-    frame = cv2.resize(frame, (width, height), interpolation = cv2.INTER_LINEAR)
-    
-    #frame[rowMask:, 0:colMask] = 0  # mask out changing timestamp
-
-    #print('New Dimensions : ', frame.shape)
-    
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    gray = cv2.GaussianBlur(gray, (blur_size, blur_size), 0)
-    
-    gray[rowMask:, 0:colMask] = 0  # mask out changing timestamp
-
-    if total > framecount:
-
-        motion = md.detect(gray, tVal=tVal)
-
-        if motion is not None:
-            (thresh, (minX, minY, maxX, maxY)) = motion
-            cv2.rectangle(frame, (minX, minY), (maxX, maxY), (0, 255, 255), 1)
-            
-            # write new video file with just the motion here
-            out.write(frame)
-            #cv2.imshow('frame', frame)
-
-    md.update_background(gray)
-    total += 1
-
-    cv2.imshow('frame', frame)
-    if cv2.waitKey(1) == ord('q'):
-        break
-
-vid.release()
 out.release()
-cv2.destroyAllWindows()
 
-    
+cv2.destroyAllWindows()
