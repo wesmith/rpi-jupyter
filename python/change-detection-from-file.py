@@ -8,7 +8,7 @@
 
 import cv2
 import numpy as np
-import sys
+import os, sys
 
 
 class MotionDetector():
@@ -70,7 +70,9 @@ class MotionDetector():
 
 
 #filepath  = '/home/smithw/Devel/motioneyeos/captures/'
-filepath  = '/home/smithw/Devel/test_videos/'
+#filepath  = '/home/smithw/Devel/test_videos/'
+filepath  = '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house/'
+'''
 filenames = ['Camera1_2022-01-25-10-52-02.mp4',
     '2022_0126_153604_100.MP4',
     '2022_0126_160004_108.MP4',
@@ -79,6 +81,14 @@ filenames = ['Camera1_2022-01-25-10-52-02.mp4',
     '2022_0127_154644_265.MP4',
     '2022_0127_155844_269.MP4',
     '2022_0127_160144_270.MP4']
+'''
+
+start = '2022_0127_160144_270.MP4'
+end   = '2022_0127_161344_274.MP4'
+mov_list = os.listdir(filepath)
+mov_list.sort()
+start_vid, end_vid = mov_list.index(start), mov_list.index(end)
+filenames = mov_list[start_vid : end_vid + 1]
 
 # change-detection parameters
 scale      =  0.5 # scale for processing and final video size
@@ -95,18 +105,16 @@ fps        = 30  # frames/sec for final video of detected change
 start_vid  = 6
 end_vid    = 7
 
-savenam = 'results/{}-{}.mp4'.format(filenames[start_vid][0:16], filenames[end_vid][5:16])
+savenam = 'results/{}-{}.mp4'.format(filenames[0][0:16], filenames[-1][5:16])
 
 md  = MotionDetector(alpha=alpha)
 
 first_frame = True
 
 # video loop
-for num in range(start_vid, end_vid + 1): # last index is n+1
+for num in range(0, len(filenames)):
 
     fullpath = filepath + filenames[num]
-    print('processing {}'.format(fullpath))
-    #savenam   = 'results/{}-changes.mp4'.format(filenames[num])
 
     vid   = cv2.VideoCapture(fullpath)
     count = 0  # initialize skip count
@@ -136,6 +144,8 @@ for num in range(start_vid, end_vid + 1): # last index is n+1
         out    = cv2.VideoWriter(savenam, fourcc, fps, (width, height))
 
         total  = 0
+
+    print('/nprocessing {}'.format(fullpath))
 
     while vid.isOpened():
 
