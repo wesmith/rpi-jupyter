@@ -9,6 +9,7 @@
 import cv2
 import numpy as np
 import os, sys
+from time import time
 
 
 class MotionDetector():
@@ -68,23 +69,11 @@ class MotionDetector():
         return (thresh, (minX, minY, maxX, maxY))
 
 
-
-#filepath  = '/home/smithw/Devel/motioneyeos/captures/'
-#filepath  = '/home/smithw/Devel/test_videos/'
 filepath  = '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house/'
-'''
-filenames = ['Camera1_2022-01-25-10-52-02.mp4',
-    '2022_0126_153604_100.MP4',
-    '2022_0126_160004_108.MP4',
-    '2022_0126_170004_128.MP4',
-    '2022_0127_154344_264.MP4',
-    '2022_0127_154644_265.MP4',
-    '2022_0127_155844_269.MP4',
-    '2022_0127_160144_270.MP4']
-'''
 
 start = '2022_0127_160144_270.MP4'
-end   = '2022_0127_161344_274.MP4'
+end   = '2022_0127_165843_289.MP4'
+
 mov_list = os.listdir(filepath)
 mov_list.sort()
 start_vid, end_vid = mov_list.index(start), mov_list.index(end)
@@ -110,6 +99,7 @@ savenam = 'results/{}-{}.mp4'.format(filenames[0][0:16], filenames[-1][5:16])
 md  = MotionDetector(alpha=alpha)
 
 first_frame = True
+t0 = time()
 
 # video loop
 for num in range(0, len(filenames)):
@@ -145,7 +135,7 @@ for num in range(0, len(filenames)):
 
         total  = 0
 
-    print('/nprocessing {}'.format(fullpath))
+    print('\nprocessing {}'.format(fullpath))
 
     while vid.isOpened():
 
@@ -180,7 +170,7 @@ for num in range(0, len(filenames)):
         md.update_background(gray)
         total += 1
 
-        cv2.imshow('frame', frame)
+        #cv2.imshow('frame', frame)
         if cv2.waitKey(1) == ord('q'):
             break
 
@@ -189,3 +179,8 @@ for num in range(0, len(filenames)):
 out.release()
 
 cv2.destroyAllWindows()
+
+dt = time() - t0
+
+print('\nIt took {} sec to process {} total frames, or {} frames/sec\n'.\
+      format(dt, total, total/dt))
