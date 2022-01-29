@@ -9,7 +9,7 @@
 import cv2
 import numpy as np
 import os, sys
-from time import time
+from   time import time
 
 
 class MotionDetector():
@@ -69,16 +69,25 @@ class MotionDetector():
         return (thresh, (minX, minY, maxX, maxY))
 
 
+def get_file_list(filepath, names):
+
+    mov_list = os.listdir(filepath)
+    mov_list.sort()
+
+    ind0, ind1 = mov_list.index(names[0]), mov_list.index(names[1])
+    return mov_list[ind0 : ind1 + 1]
+
+
 class VideoProcess():
 
-    def __init__(self, filenames, filepath, skip, row_frac, col_frac, 
+    def __init__(self, filepath, names, skip, row_frac, col_frac,
                  fps, scale, base, 
                  framecount=15, blur_size=3, t_val=5, alpha=0.2, frameshow=False):
         '''
         INPUT VIDEOS
-         filenames:
-         filepath:
-         skip:        number of overlap frames if there is overlap between consecutive videos
+         filepath:     full path to video files
+         names:        tuple: (starting_videofile_name, ending_videofile_name)
+         skip:         number of overlap frames if there is overlap between consecutive videos
          row_frac:    
          col_frac:
         OUTPUT VIDEO
@@ -92,9 +101,8 @@ class VideoProcess():
          alpha:
          frameshow:
         '''
-        self.filenames  = filenames 
         self.filepath   = filepath
-        # if overlap between consecutive vids, 'skip' is the number of overlap frames
+        self.filenames  = get_file_list(self.filepath, names)
         self.skip       = skip
         self.blur_size  = blur_size
         self.framecount = framecount
@@ -196,109 +204,13 @@ class VideoProcess():
         self.out.release()
         cv2.destroyAllWindows()
 
-'''
-start_vid  = 6
-end_vid    = 7
-
-savenam = 'results/{}-{}.mp4'.format(filenames[0][0:16], filenames[-1][5:16])
-
-md  = MotionDetector(alpha=alpha)
-
-first_frame = True
-t0 = time()
-
-# video loop
-for num in range(0, len(filenames)):
-
-    fullpath = filepath + filenames[num]
-
-    vid   = cv2.VideoCapture(fullpath)
-    count = 0  # initialize skip count
-    
-    if first_frame:  # first frame of first video: only visit this once
-
-        first_frame = False
-
-        ret, frame = vid.read() # get the first frame to get frame size
-        if not ret:
-            print("Can't receive frame (stream end?). Exiting ...")
-            vid.release()
-            sys.exit(0)
-
-        print('Original Dimensions: {} x {}'.format(frame.shape[1], frame.shape[0]))
-
-        # final frame size
-        width  = int(frame.shape[1] * scale)
-        height = int(frame.shape[0] * scale)
-    
-        rowMask = int(rowFrac * height)
-        colMask = int(colFrac * width)
-
-        print('New Dimensions: {} x {}'.format(width, height))
-
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        out    = cv2.VideoWriter(savenam, fourcc, fps, (width, height))
-
-        total  = 0
-
-    print('\nprocessing {}'.format(fullpath))
-
-    while vid.isOpened():
-
-        ret, frame = vid.read()
-        if not ret:
-            break  # end of input video file
-
-        # TODO: need a check that subsequent vids have same sizes, otherwise error
-
-        if count < skip:  # skip over redundant frames at beginning of video splice
-            count += 1
-            continue
-
-        frame = cv2.resize(frame, (width, height), interpolation = cv2.INTER_LINEAR)
-
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        gray = cv2.GaussianBlur(gray, (blur_size, blur_size), 0)
-
-        gray[rowMask:, 0:colMask] = 0  # mask out changing timestamp
-
-        if total > framecount:
-
-            motion = md.detect(gray, tVal=tVal)
-
-            if motion is not None:
-                (thresh, (minX, minY, maxX, maxY)) = motion
-                cv2.rectangle(frame, (minX, minY), (maxX, maxY), (0, 255, 255), 1)
-
-                # write new video file with just the frames with motion
-                out.write(frame)
-
-        md.update_background(gray)
-        total += 1
-
-        #cv2.imshow('frame', frame)
-        if cv2.waitKey(1) == ord('q'):
-            break
-
-    vid.release()
-
-out.release()
-
-cv2.destroyAllWindows()
-'''
 
 if __name__=='__main__':
     
     
     filepath  = '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house/'
 
-    start = '2022_0126_150004_088.MP4'
-    end   = '2022_0126_150304_089.MP4'
-
-    mov_list = os.listdir(filepath)
-    mov_list.sort()
-    start_vid, end_vid = mov_list.index(start), mov_list.index(end)
-    filenames = mov_list[start_vid : end_vid + 1]
+    filenames = ('2022_0126_150004_088.MP4', '2022_0126_150304_089.MP4')
 
     # change-detection parameters
     skip       =  30  # overlap frames between end of one video and beginning of next
@@ -313,7 +225,7 @@ if __name__=='__main__':
     alpha      =  0.2 # weighting between current frame and background
     frameshow  = False # True shows frames as they are processed, but it slows things down
 
-    vp = VideoProcess(filenames, filepath, skip, row_frac, col_frac, 
+    vp = VideoProcess(filepath, filenames, skip, row_frac, col_frac,
                         fps, scale, base, 
                         framecount=framecount, blur_size=blur_size,
                         t_val=t_val, alpha=alpha, frameshow=frameshow)
