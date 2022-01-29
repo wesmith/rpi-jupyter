@@ -69,28 +69,134 @@ class MotionDetector():
         return (thresh, (minX, minY, maxX, maxY))
 
 
-filepath  = '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house/'
+class VideoProcess():
 
-start = '2022_0127_160144_270.MP4'
-end   = '2022_0127_165843_289.MP4'
+    def __init__(self, filenames, filepath, skip, row_frac, col_frac, 
+                 fps, scale, base, 
+                 framecount=15, blur_size=3, t_val=5, alpha=0.2, frameshow=False):
+        '''
+        INPUT VIDEOS
+         filenames:
+         filepath:
+         skip:        number of overlap frames if there is overlap between consecutive videos
+         row_frac:    
+         col_frac:
+        OUTPUT VIDEO
+         fps:
+         scale:
+         base:
+        PROCESSING PARAMS
+         framecount:
+         blur_size:
+         t_val:
+         alpha:
+         frameshow:
+        '''
+        self.filenames  = filenames 
+        self.filepath   = filepath
+        # if overlap between consecutive vids, 'skip' is the number of overlap frames
+        self.skip       = skip
+        self.blur_size  = blur_size
+        self.framecount = framecount
+        self.t_val      = t_val
+        self.frameshow  = frameshow
 
-mov_list = os.listdir(filepath)
-mov_list.sort()
-start_vid, end_vid = mov_list.index(start), mov_list.index(end)
-filenames = mov_list[start_vid : end_vid + 1]
+        self.md         = MotionDetector(alpha=alpha)
 
-# change-detection parameters
-scale      =  0.5 # scale for processing and final video size
-blur_size  =  3   # background blur
-framecount = 15   # background history length in frames
-tVal       =  5   # threshold for detection: 25 isn't bad
-alpha      =  0.2 # weighting between current frame and background
-rowFrac    =  0.9 # values to mask out changing timestamp in lower-left corner
-colFrac    =  0.3
-skip       =  30   # overlap frames between end of one video and beginning of next
+        fullpath = self.filepath + self.filenames[0] # first video
+        vid      = cv2.VideoCapture(fullpath)
+        
+        ret, frame = vid.read() # first frame to get frame size
+        
+        if not ret:
+            print("Can't receive frame (stream end?). Exiting ...")
+            vid.release()
+            sys.exit(0)
+            
+        vid.release()
 
-fps        = 30  # frames/sec for final video of detected change
+        print('\nOriginal Video Dimensions: {} x {}'.\
+              format(frame.shape[1], frame.shape[0]))
 
+        # final frame size
+        self.width  = int(frame.shape[1] * scale)
+        self.height = int(frame.shape[0] * scale)
+    
+        self.row_mask = int(row_frac * self.height)
+        self.col_mask = int(col_frac * self.width)
+
+        print('\nNew Video Dimensions: {} x {}'.format(self.width, self.height))
+
+        savenam = '{}/{}-{}.mp4'.\
+                  format(base, self.filenames[0][0:16], self.filenames[-1][5:16])
+        fourcc   = cv2.VideoWriter_fourcc(*'mp4v')
+        self.out = cv2.VideoWriter(savenam, fourcc, fps, 
+                                   (self.width, self.height))
+ 
+    def run(self):
+        
+        total = 0  # total frame count over all video files
+        
+        # video-file loop
+        for num in range(0, len(self.filenames)):
+            
+            fullpath = self.filepath + self.filenames[num]
+            vid      = cv2.VideoCapture(fullpath)
+            count    = 0  # initialize skip count    
+            
+            print('\nprocessing {}'.format(fullpath))
+
+            while vid.isOpened():
+
+                ret, frame = vid.read()
+                if not ret:
+                    break  # end of input video file
+
+                # skip over redundant frames at beginning of video splice if overlap exists
+                if count < self.skip:
+                    count += 1
+                    continue
+
+                frame = cv2.resize(frame, (self.width, self.height), 
+                                   interpolation=cv2.INTER_LINEAR)
+
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                gray = cv2.GaussianBlur(gray, 
+                                        (self.blur_size, self.blur_size), 0)
+
+                gray[self.row_mask:, 0:self.col_mask] = 0  # mask out changing timestamp
+
+                if total > self.framecount:
+
+                    motion = self.md.detect(gray, tVal=self.t_val)
+
+                    if motion is not None:
+                        (thresh, (minX, minY, maxX, maxY)) = motion
+                        cv2.rectangle(frame, (minX, minY), (maxX, maxY), (0, 255, 255), 1)
+
+                        # write new video file with just the frames with motion
+                        self.out.write(frame)
+
+                self.md.update_background(gray)
+                total += 1
+
+                if self.frameshow:
+                    cv2.imshow('frame', frame)
+                    if cv2.waitKey(1) == ord('q'):
+                        break
+
+            vid.release()
+
+        self.cleanup()
+        
+        return total  # total frames processed
+
+
+    def cleanup(self):
+        self.out.release()
+        cv2.destroyAllWindows()
+
+'''
 start_vid  = 6
 end_vid    = 7
 
@@ -179,8 +285,43 @@ for num in range(0, len(filenames)):
 out.release()
 
 cv2.destroyAllWindows()
+'''
 
-dt = time() - t0
+if __name__=='__main__':
+    
+    
+    filepath  = '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house/'
 
-print('\nIt took {} sec to process {} total frames, or {} frames/sec\n'.\
-      format(dt, total, total/dt))
+    start = '2022_0126_150004_088.MP4'
+    end   = '2022_0126_150304_089.MP4'
+
+    mov_list = os.listdir(filepath)
+    mov_list.sort()
+    start_vid, end_vid = mov_list.index(start), mov_list.index(end)
+    filenames = mov_list[start_vid : end_vid + 1]
+
+    # change-detection parameters
+    skip       =  30  # overlap frames between end of one video and beginning of next
+    row_frac   =  0.9 # values to mask out changing timestamp in lower-left corner
+    col_frac   =  0.3
+    fps        = 30   # frames/sec for final video of detected change
+    scale      =  0.5 # scale for processing and final video size
+    base       = 'results'
+    framecount = 15   # background history length in frames
+    blur_size  =  3   # background blur
+    t_val      =  5   # threshold for detection
+    alpha      =  0.2 # weighting between current frame and background
+    frameshow  = False # True shows frames as they are processed, but it slows things down
+
+    vp = VideoProcess(filenames, filepath, skip, row_frac, col_frac, 
+                        fps, scale, base, 
+                        framecount=framecount, blur_size=blur_size,
+                        t_val=t_val, alpha=alpha, frameshow=frameshow)
+    t0 = time()
+
+    total = vp.run()
+
+    dt = time() - t0
+
+    print('\nIt took {} sec to process {} total frames, or {} frames/sec\n'.\
+          format(dt, total, total/dt))
