@@ -226,16 +226,21 @@ if __name__=='__main__':
     filepath  = '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house/'
 
     #filenames = ('2022_0126_150004_088.MP4', '2022_0126_150304_089.MP4')
+    '''
     filenames = (('2022_0128_104124_002.MP4', '2022_0128_113824_021.MP4'),
                  ('2022_0128_114124_022.MP4', '2022_0128_123824_041.MP4'),
                  ('2022_0128_124124_042.MP4', '2022_0128_133829_061.MP4'))
-    '''
+
                 ('2022_0128_134129_062.MP4', ''),'2022_0128_133829_061.MP4'
                 ('2022_0128_144128_082.MP4', ''),
                 ('2022_0128_154128_102.MP4', ''),
                 ('2022_0128_164128_122.MP4', ''),
                 ('2022_0128_174127_142.MP4', ''))
     '''
+    # use below sequences to train: very windy, and lots of people, dogs, cars
+    #filenames = ('2022_0128_104425_003.MP4', '2022_0128_104725_004.MP4') # very windy: short
+    #filenames = ('2022_0128_104425_003.MP4', '2022_0128_105625_007.MP4') # very windy: longer
+    filenames = ('2022_0127_160144_270.MP4', '2022_0127_163143_280.MP4') # people, dogs, cars
 
     # change-detection parameters
     skip       =  30  # overlap frames between end of one video and beginning of next
@@ -244,10 +249,11 @@ if __name__=='__main__':
     fps        = 30   # frames/sec for final video of detected change
     scale      =  0.5 # scale for processing and final video size
     base       = 'results'
-    framecount = 15   # background history length in frames
-    blur_size  =  3   # background blur
-    t_val      =  5   # threshold for detection
-    alpha      =  0.2 # weighting between current frame and background
+    framecount = 15   # background frames to get before motion detection starts (minor param)
+    blur_size  = 15   # background blur
+    t_val      = 10   # threshold for detection: probably the most sensitive parameter
+    alpha      =  0.5 # weighting between current frame and background: float between 0 and 1
+                      # the higher it is, the more the background looks like the current frame
     frameshow  = False # True shows frames as they are processed, but it slows things down
 
     vp = VideoProcess(filepath, filenames, skip, row_frac, col_frac,
