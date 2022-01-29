@@ -78,6 +78,21 @@ def get_file_list(filepath, names):
     return mov_list[ind0 : ind1 + 1]
 
 
+class VideoOutput():
+
+    def __init__(self, width, height, fps):
+
+        self.width  = width
+        self.height = height
+        self.fps    = fps
+        self.fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+
+    def new_writer(self, savname):
+
+        return cv2.VideoWriter(savenam, self.fourcc, self.fps,
+                               (self.width, self.height))
+
+
 class VideoProcess():
 
     def __init__(self, filepath, names, skip, row_frac, col_frac,
@@ -210,7 +225,17 @@ if __name__=='__main__':
     
     filepath  = '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house/'
 
-    filenames = ('2022_0126_150004_088.MP4', '2022_0126_150304_089.MP4')
+    #filenames = ('2022_0126_150004_088.MP4', '2022_0126_150304_089.MP4')
+    filenames = (('2022_0128_104124_002.MP4', '2022_0128_113824_021.MP4'),
+                 ('2022_0128_114124_022.MP4', '2022_0128_123824_041.MP4'),
+                 ('2022_0128_124124_042.MP4', '2022_0128_133829_061.MP4'))
+    '''
+                ('2022_0128_134129_062.MP4', ''),'2022_0128_133829_061.MP4'
+                ('2022_0128_144128_082.MP4', ''),
+                ('2022_0128_154128_102.MP4', ''),
+                ('2022_0128_164128_122.MP4', ''),
+                ('2022_0128_174127_142.MP4', ''))
+    '''
 
     # change-detection parameters
     skip       =  30  # overlap frames between end of one video and beginning of next
