@@ -10,6 +10,12 @@ import cv2
 
 pg.init()
 
+RED     = (255, 0,   0)
+GREEN   = (0, 255,   0)
+BLUE    = (0,   0, 255)
+CYAN    = (0, 255, 255)
+MAGENTA = (255, 0, 255)
+YELLOW  = (255, 255, 0)
 
 def get_frame(fullpath, scale):
     # get the first frame of desired video as guide to mask development
@@ -37,19 +43,20 @@ def get_frame(fullpath, scale):
     return (width, height), frame
 
 
-def drawCirc(screen, x, y, rad, color):
+def drawCirc(screen, x, y, rad=10, color=RED):
     pg.draw.circle(screen, color, (x, y), rad)
 
 
-RED   = (255, 0, 0)
-GREEN = (0, 255, 0)
-BLUE  = (0, 0, 255)
-
-imname = 'results/tmp.jpg'
+imname   = 'results/tmp.jpg'
+maskname = 'results/mask.jpg'
 
 filepath  = '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house/'
 filename  = '2022_0128_104425_003.MP4'
 scale     = 0.5
+rad       = 10  # redius of blobs to draw as mask
+radii     = [2, 4, 6, 8, 10, 16, 32] # possible radii of blobs
+radindx   = 0
+color     = YELLOW # color of mask
 
 size, frame = get_frame(filepath + filename, scale)
 
@@ -63,35 +70,35 @@ screen.blit(myimage, (0, 0))
 isPressed = False
 run = True
 while run:
-    
-    pg.display.flip()
+
     for event in pg.event.get():
-        #print('event.type: {}'.format(event.type))
-        # 'quit' is by pressing 'cross' in upper-right window menu
-        if event.type == pg.QUIT:
-            run = False
-
-
-'''
-screen = pg.display.set_mode((500, 500))
-
-def drawCirc(screen, x, y, rad):
-    pg.draw.circle(screen, BLUE, (x, y), rad)
-    
-while True:
-    
-    for event in pg.event.get():
-        
         if event.type == pg.MOUSEBUTTONDOWN:
             isPressed = True
         elif event.type == pg.MOUSEBUTTONUP:
             isPressed = False
         elif event.type == pg.MOUSEMOTION and isPressed:
             x, y = pg.mouse.get_pos()
-            drawCirc(screen, x, y, rad=10)
+            drawCirc(screen, x, y, rad=radii[radindx], color=color)
+        elif event.type == pg.KEYDOWN:
+            if event.key == pg.K_BACKSPACE: # backspace to clear mask
+                screen.blit(myimage, (0,0))
+            if event.key == pg.K_s:  # s to save mask
+                print('saving mask to {}'.format(maskname))
+                pg.image.save(screen, maskname)
+            if event.key == pg.K_UP: # arrow up to cycle thru radii
+                radindx += 1
+                radindx = radindx % len(radii)
+                print('blob radius is now {}'.format(radii[radindx]))
+            if event.key == pg.K_q:  # q to quit
+                run = False
 
-    pg.display.flip()  # flip() refreshes the screen for each pass
-'''
+        #print('event type {}'.format(event.type))
+
+        if event.type == pg.QUIT: # hit 'X' in upper-right menu to quit
+            run = False
+
+    pg.display.flip()
+
 
 print('\npyGame gently quit...\n')
 
