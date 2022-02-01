@@ -69,13 +69,18 @@ class MotionDetector():
         return (thresh, (minX, minY, maxX, maxY))
 
 
-def get_file_list(filepath, names):
-
+def get_file_list(filepath, file_range, num):
+    # file_range: provides a subset of all files at filepath, if desired
+    
     mov_list = os.listdir(filepath)
     mov_list.sort()
 
-    ind0, ind1 = mov_list.index(names[0]), mov_list.index(names[1])
-    return mov_list[ind0 : ind1 + 1]
+    ind0 = mov_list.index(file_range[0])
+    ind1 = mov_list.index(file_range[1])
+    dd   = mov_list[ind0 : ind1 + 1]
+    # return a list of lists: each sublist is num files long,
+    # but the last sublist may be less than num files long
+    return [dd[i:i + num] for i in range(0, len(dd), num)]
 
 
 class VideoOutput():
@@ -92,33 +97,36 @@ class VideoOutput():
         return cv2.VideoWriter(savenam, self.fourcc, self.fps,
                                (self.width, self.height))
 
-
 class VideoProcess():
 
-    def __init__(self, filepath, names, skip, row_frac, col_frac,
-                 fps, scale, base, maskpath=None,
+    def __init__(self, datadict, num, skip, row_frac, col_frac,
+                 fps, scale, base,
                  framecount=15, blur_size=3, t_val=5, alpha=0.2, frameshow=False):
         '''
         INPUT VIDEOS
-         filepath:     full path to video files
-         names:        tuple: (starting_videofile_name, ending_videofile_name)
-         skip:         number of overlap frames if there is overlap between consecutive videos
-         row_frac:    
+         datadict['basedir']: str: full path to base directory of video files
+         datadict['subdir']:  str: subdirectory to video files
+         datadict['range']:   tuple of str: (starting_videofile_name, ending_videofile_name)
+         datadict['mask']:    str: path and name of motion-ignore mask used; 'None' if no mask
+         datadict['desc']:    str: brief description of day (eg, calm, windy, raining, etc.)
+         num:                 int: number of input videos to process per output motion-detect video
+         skip:                int: number of overlap frames if there is overlap between 
+                              consecutive videos
+         row_frac:
          col_frac:
         OUTPUT VIDEO
          fps:
          scale:
          base:
         PROCESSING PARAMS
-         maskpath:    full path to the motion-ignore mask
          framecount:
          blur_size:
          t_val:
          alpha:
          frameshow:
         '''
-        self.filepath   = filepath
-        self.filenames  = get_file_list(self.filepath, names)
+        self.filepath   = datadict['basedir'] + datadict['subdir']
+        self.filenames  = get_file_list(self.filepath, datadict['range'], num)
         self.skip       = skip
         self.blur_size  = blur_size
         self.framecount = framecount
@@ -128,7 +136,7 @@ class VideoProcess():
 
         self.md         = MotionDetector(alpha=alpha)
 
-        fullpath = self.filepath + self.filenames[0] # first video
+        fullpath = self.filepath + self.filenames[0][0] # first video (filenames now a list of lists)
         vid      = cv2.VideoCapture(fullpath)
         
         ret, frame = vid.read() # first frame to get frame size
@@ -147,11 +155,13 @@ class VideoProcess():
         self.width  = int(frame.shape[1] * scale)
         self.height = int(frame.shape[0] * scale)
     
+        # block out ROVE timestamp location whether mask or no mask
         self.row_mask = int(row_frac * self.height)
         self.col_mask = int(col_frac * self.width)
 
         # rescale mask if it is input
-        if maskpath is not None:
+        if datadict['mask'] is not None:
+            maskpath = self.filepath + datadict['mask']
             mask = cv2.imread(maskpath, 0) # 0 means read as grayscale
             self.mask = cv2.resize(mask, (self.width, self.height),
                                    interpolation=cv2.INTER_NEAREST)
@@ -168,68 +178,73 @@ class VideoProcess():
         
         total = 0  # total frame count over all video files
         
-        # video-file loop
-        for num in range(0, len(self.filenames)):
+        # loop over video groups: one motion-detect video produced per group
+        for video_group in self.filenames:
             
-            fullpath = self.filepath + self.filenames[num]
-            vid      = cv2.VideoCapture(fullpath)
-            count    = 0  # initialize skip count    
-            
-            print('\nprocessing {}'.format(fullpath))
+            # create new video capture object here with video_group[0]-video_group[-1] as name
 
-            while vid.isOpened():
+            # loop over videos within a group
+            for input_video in video_group:
 
-                ret, frame = vid.read()
-                if not ret:
-                    break  # end of input video file
+                fullpath = self.filepath + video_group
+                vid      = cv2.VideoCapture(fullpath)
+                count    = 0  # initialize skip count    
 
-                # skip over redundant frames at beginning of video splice if overlap exists
-                if count < self.skip:
-                    count += 1
-                    continue
+                print('\nprocessing {}'.format(fullpath))
 
-                frame = cv2.resize(frame, (self.width, self.height), 
-                                   interpolation=cv2.INTER_LINEAR)
+                while vid.isOpened():
 
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                    ret, frame = vid.read()
+                    if not ret:
+                        break  # end of input video file
 
-                gray = cv2.GaussianBlur(gray, 
-                                        (self.blur_size, self.blur_size), 0)
+                    # skip over redundant frames at beginning of video splice if overlap exists
+                    if count < self.skip:
+                        count += 1
+                        continue
 
-                # if motion-ignore mask is input, it has already been resized
-                if self.mask is not None:
-                    #gray = cv2.bitwise_and(gray, gray, mask=self.mask)
-                    gray = cv2.bitwise_and(gray, self.mask) # this is a better result
+                    frame = cv2.resize(frame, (self.width, self.height), 
+                                       interpolation=cv2.INTER_LINEAR)
 
-                    # diagnostic check on the masking: remove before flight
-                    #while True:
-                    #   cv2.imshow('masked', gray)
-                    #   if cv2.waitKey(1) == ord('q'):
-                    #       break
+                    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-                # mask out timestamp: this may be redundant if mask already masks this
-                gray[self.row_mask:, 0:self.col_mask] = 0
+                    gray = cv2.GaussianBlur(gray, 
+                                            (self.blur_size, self.blur_size), 0)
 
-                if total > self.framecount:
+                    # if motion-ignore mask is input, it has already been resized
+                    if self.mask is not None:
+                        #gray = cv2.bitwise_and(gray, gray, mask=self.mask)
+                        gray = cv2.bitwise_and(gray, self.mask) # this is a better result
 
-                    motion = self.md.detect(gray, tVal=self.t_val)
+                        # diagnostic check on the masking: remove before flight
+                        #while True:
+                        #   cv2.imshow('masked', gray)
+                        #   if cv2.waitKey(1) == ord('q'):
+                        #       break
 
-                    if motion is not None:
-                        (thresh, (minX, minY, maxX, maxY)) = motion
-                        cv2.rectangle(frame, (minX, minY), (maxX, maxY), (0, 255, 255), 1)
+                    # mask out timestamp: this may be redundant if mask already masks this
+                    gray[self.row_mask:, 0:self.col_mask] = 0
 
-                        # write new video file with just the frames with motion
-                        self.out.write(frame)
+                    if total > self.framecount:
 
-                self.md.update_background(gray)
-                total += 1
+                        motion = self.md.detect(gray, tVal=self.t_val)
 
-                if self.frameshow:
-                    cv2.imshow('frame', frame)
-                    if cv2.waitKey(1) == ord('q'):
-                        break
+                        if motion is not None:
+                            (thresh, (minX, minY, maxX, maxY)) = motion
+                            cv2.rectangle(frame, (minX, minY), (maxX, maxY), (0, 255, 255), 1)
 
-            vid.release()
+                            # write new video file with just the frames with motion
+                            self.out.write(frame)
+
+                    self.md.update_background(gray)
+                    total += 1
+
+                    if self.frameshow:
+                        cv2.imshow('frame', frame)
+                        if cv2.waitKey(1) == ord('q'):
+                            break
+
+                vid.release()
 
         self.cleanup()
         
@@ -241,30 +256,19 @@ class VideoProcess():
         cv2.destroyAllWindows()
 
 
+    def get_filelist(self):
+        self.cleanup()
+        return self.filenames
+
+
 if __name__=='__main__':
     
-    
-    filepath  = '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house/2022_0127/'
-
-    #filenames = ('2022_0126_150004_088.MP4', '2022_0126_150304_089.MP4')
-    '''
-    filenames = (('2022_0128_104124_002.MP4', '2022_0128_113824_021.MP4'),
-                 ('2022_0128_114124_022.MP4', '2022_0128_123824_041.MP4'),
-                 ('2022_0128_124124_042.MP4', '2022_0128_133829_061.MP4'))
-
-                ('2022_0128_134129_062.MP4', ''),'2022_0128_133829_061.MP4'
-                ('2022_0128_144128_082.MP4', ''),
-                ('2022_0128_154128_102.MP4', ''),
-                ('2022_0128_164128_122.MP4', ''),
-                ('2022_0128_174127_142.MP4', ''))
-    '''
-    filebase = '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house/'
-
-    data_2022_0128 = {'filepath':'2022_0128/',
-                      'mask': 'masks/2022_0128_104425_003.MP4.mask_2022_0131_203422.jpg',
-                      'desc': 'very windy day!',
-                      'beg': '2022_0128_104124_002.MP4',
-                      'end': '2022_0128_183827_161.MP4'}
+    data_2022_0128 = {'basedir': '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house/',
+                      'subdir':  '2022_0128/',
+                      'mask':    'masks/2022_0128_104425_003.MP4.mask_2022_0131_203422.jpg',
+                      'desc':    'very windy day!',
+                      'range':   ('2022_0128_104124_002.MP4', '2022_0128_110225_009.MP4')}
+                      #'range':   ('2022_0128_104124_002.MP4', '2022_0128_183827_161.MP4')}
 
     # use below sequences to train: very windy, and lots of people, dogs, cars
     #filenames = ('2022_0128_104425_003.MP4', '2022_0128_104725_004.MP4') # very windy: short
@@ -274,6 +278,7 @@ if __name__=='__main__':
     maskpath  = None
 
     # change-detection parameters
+    num        =  3  # number of input videos to process per output motion-detect video
     skip       =  30  # overlap frames between end of one video and beginning of next
     row_frac   =  0.9 # values to mask out changing timestamp in lower-left corner
     col_frac   =  0.3
@@ -287,15 +292,21 @@ if __name__=='__main__':
                       # the higher it is, the more the background looks like the current frame
     frameshow  = False # True shows frames as they are processed, but it slows things down
 
-    vp = VideoProcess(filepath, filenames, skip, row_frac, col_frac,
-                        fps, scale, base, maskpath=maskpath,
+    vp = VideoProcess(data_2022_0128, num, skip, row_frac, col_frac,
+                        fps, scale, base,
                         framecount=framecount, blur_size=blur_size,
                         t_val=t_val, alpha=alpha, frameshow=frameshow)
     t0 = time()
 
-    total = vp.run()
+    #total = vp.run()
+    
+    dd = vp.get_filelist()
+    for j in dd:
+        print()
+        for k in j:
+            print(k)
 
     dt = time() - t0
 
-    print('\nIt took {} sec to process {} total frames, or {} frames/sec\n'.\
-          format(dt, total, total/dt))
+    #print('\nIt took {} sec to process {} total frames, or {} frames/sec\n'.\
+    #      format(dt, total, total/dt))
