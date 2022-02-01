@@ -9,6 +9,7 @@ import pygame as pg
 import cv2
 import numpy as np
 import sys
+from datetime import datetime
 
 
 pg.init()
@@ -21,6 +22,7 @@ MAGENTA = (255,   0, 255)
 YELLOW  = (255, 255,   0)
 WHITE   = (255, 255, 255)
 BLACK   = (  1,   1,   1)  # experimenting with 'black' value
+
 
 def get_frame(fullpath, scale=1, ymin=10, ymax=250):
     # get the first frame of desired video as guide to mask development
@@ -75,7 +77,8 @@ def run(filepath, videoname, scale=1.0, ymin=10, ymax=250, color=BLACK):
     colindx   = 0
 
     snapshot_name = filepath + videoname + '.snapshot.jpg'  # frame on which to build mask
-    mask_name     = filepath + videoname + '.mask.jpg'      # mask name
+    mask_name     = '.mask_{:%Y_%m%d_%H%M%S}.jpg'.format(datetime.now())
+    mask_name     = filepath + videoname + mask_name        # mask name
 
     # draw mask on full size image: scale = 1:
     # much easier for user-defined mask delineation
