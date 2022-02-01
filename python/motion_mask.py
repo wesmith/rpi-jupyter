@@ -61,10 +61,11 @@ def drawCirc(screen, x, y, rad=10, color=RED):
     pg.draw.circle(screen, color, (x, y), rad)
 
 
-def run(filepath, videoname, scale=1.0, ymin=10, ymax=250, color=BLACK):
+def run(filepath, videoname, fixme=None, scale=1.0, ymin=10, ymax=250, color=BLACK):
     '''
     filepath:  path to video files
     videoname: name of video to use for mask definition
+    fixme:     a previous mask (path with filename) that needs correction (optional)
     scale:     scale factor for image size (use 1.0 in this program: scale is
                handled later in the motion-detection program)
     ymin:      min image pixel value, used for mask thresholding
@@ -76,16 +77,20 @@ def run(filepath, videoname, scale=1.0, ymin=10, ymax=250, color=BLACK):
     colors    = [BLACK, WHITE]
     colindx   = 0
 
-    snapshot_name = filepath + videoname + '.snapshot.jpg'  # frame on which to build mask
+    # snapshot is the video frame on which to build the mask
+    maskpath      = filepath + 'masks/'
+    snapshot_name = maskpath + videoname + '.snapshot.jpg'
     mask_name     = '.mask_{:%Y_%m%d_%H%M%S}.jpg'.format(datetime.now())
-    mask_name     = filepath + videoname + mask_name        # mask name
+    mask_name     = maskpath + videoname + mask_name
 
     # draw mask on full size image: scale = 1:
     # much easier for user-defined mask delineation
     size, frame = get_frame(filepath + videoname, scale=scale, ymin=ymin, ymax=ymax)
 
-    #print('\nmin, max of grayscale image: {}, {}\n'.\
-    #     format(np.min(frame), np.max(frame)))
+    if fixme is not None:
+        old_mask = cv2.imread(fixme, 0)
+        frame    = cv2.bitwise_and(frame, old_mask)
+        snapshot_name += '.used_in_fixme.jpg'
 
     cv2.imwrite(snapshot_name, frame)
 
@@ -159,7 +164,7 @@ def run(filepath, videoname, scale=1.0, ymin=10, ymax=250, color=BLACK):
     while True:
         cv2.imshow('mask', mask)
         if cv2.waitKey(1) == ord('q'):
-                            break
+            break
 
     print('writing {}'.format(mask_name))
 
@@ -171,4 +176,8 @@ if __name__=='__main__':
     filepath   = '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house/2022_0128/'
     videoname  = '2022_0128_104425_003.MP4'  #  01/28/22 was a very windy day
 
-    run(filepath, videoname)
+    fixme = None
+    fixme = '2022_0128_104425_003.MP4.mask_2022_0131_182522.jpg' # mask to be modified
+    fixme = filepath + 'masks/' + fixme  # must be full path
+
+    run(filepath, videoname, fixme=fixme)
