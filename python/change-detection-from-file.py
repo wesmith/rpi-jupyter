@@ -92,9 +92,9 @@ class VideoOutput():
         self.fps    = fps
         self.fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 
-    def new_writer(self, savname):
+    def new_writer(self, savename):
 
-        return cv2.VideoWriter(savenam, self.fourcc, self.fps,
+        return cv2.VideoWriter(savename, self.fourcc, self.fps,
                                (self.width, self.height))
 
 class VideoProcess():
@@ -117,7 +117,7 @@ class VideoProcess():
         OUTPUT VIDEO
          fps:
          scale:
-         base:
+         base:               str: full or relative path to where video results are stored
         PROCESSING PARAMS
          framecount:
          blur_size:
@@ -129,6 +129,7 @@ class VideoProcess():
         self.filenames  = get_file_list(self.filepath, datadict['range'], num)
         self.skip       = skip
         self.blur_size  = blur_size
+        self.base       = base
         self.framecount = framecount
         self.t_val      = t_val
         self.frameshow  = frameshow
@@ -168,11 +169,14 @@ class VideoProcess():
 
         print('\nNew Video Dimensions: {} x {}'.format(self.width, self.height))
 
+        self.video_out = VideoOutput(self.width, self.height, fps)
+        '''
         savenam = '{}/{}-{}.mp4'.\
                   format(base, self.filenames[0][0:16], self.filenames[-1][5:16])
         fourcc   = cv2.VideoWriter_fourcc(*'mp4v')
         self.out = cv2.VideoWriter(savenam, fourcc, fps, 
                                    (self.width, self.height))
+        '''
  
     def run(self):
         
@@ -181,12 +185,15 @@ class VideoProcess():
         # loop over video groups: one motion-detect video produced per group
         for video_group in self.filenames:
             
-            # create new video capture object here with video_group[0]-video_group[-1] as name
+            # create new video capture object here
+            savenam = '{}/{}-{}.mp4'.\
+                      format(self.base, video_group[0][0:16], video_group[-1][5:16])
+            new_video_out = self.video_out.new_writer(savenam)
 
             # loop over videos within a group
             for input_video in video_group:
 
-                fullpath = self.filepath + video_group
+                fullpath = self.filepath + input_video
                 vid      = cv2.VideoCapture(fullpath)
                 count    = 0  # initialize skip count    
 
@@ -234,7 +241,8 @@ class VideoProcess():
                             cv2.rectangle(frame, (minX, minY), (maxX, maxY), (0, 255, 255), 1)
 
                             # write new video file with just the frames with motion
-                            self.out.write(frame)
+                            #self.out.write(frame)
+                            new_video_out.write(frame)
 
                     self.md.update_background(gray)
                     total += 1
@@ -246,13 +254,15 @@ class VideoProcess():
 
                 vid.release()
 
+            # release the output video object for this pass of the loop
+            new_video_out.release()
+
         self.cleanup()
         
         return total  # total frames processed
 
 
     def cleanup(self):
-        self.out.release()
         cv2.destroyAllWindows()
 
 
@@ -296,9 +306,6 @@ if __name__=='__main__':
                         fps, scale, base,
                         framecount=framecount, blur_size=blur_size,
                         t_val=t_val, alpha=alpha, frameshow=frameshow)
-    t0 = time()
-
-    #total = vp.run()
     
     dd = vp.get_filelist()
     for j in dd:
@@ -306,7 +313,11 @@ if __name__=='__main__':
         for k in j:
             print(k)
 
+    t0 = time()
+
+    total = vp.run()
+
     dt = time() - t0
 
-    #print('\nIt took {} sec to process {} total frames, or {} frames/sec\n'.\
-    #      format(dt, total, total/dt))
+    print('\nIt took {} sec to process {} total frames, or {} frames/sec\n'.\
+          format(dt, total, total/dt))
