@@ -1,13 +1,15 @@
 #! /home/smithw/.tensorflow2/bin/python
 # use python in (TF2) venv: opencv installed there
 
-# pygame.mask.py
+# motion_mask.py
 # WESmith 01/30/22
-# use pygame to make motion-detection ignore mask
+# use pygame to make motion-detection ignore mask using a video frame
 
 import pygame as pg
 import cv2
 import numpy as np
+import sys
+
 
 pg.init()
 
@@ -29,9 +31,10 @@ def get_frame(fullpath, scale=1, ymin=10, ymax=250):
     ret, frame = vid.read() # get first frame
 
     if not ret:
-        print("Can't receive frame (stream end?). Exiting ...")
+        print("\nERROR: Can't get video frame from {}. Exiting ...\n".\
+              format(fullpath))
         vid.release()
-        sys.exit(0)
+        sys.exit()
 
     vid.release()
 
@@ -56,84 +59,113 @@ def drawCirc(screen, x, y, rad=10, color=RED):
     pg.draw.circle(screen, color, (x, y), rad)
 
 
-imname   = 'results/tmp.jpg'
-maskname = 'results/mask.jpg'
+def run(filepath, videoname, scale=1.0, ymin=10, ymax=250, color=BLACK):
+    '''
+    filepath:  path to video files
+    videoname: name of video to use for mask definition
+    scale:     scale factor for image size (use 1.0 in this program: scale is
+               handled later in the motion-detection program)
+    ymin:      min image pixel value, used for mask thresholding
+    ymax:      max image pixel value, used for mask thrsholding
+    color:     color of mask (use BLACK for the thresholding method used here)
+    '''
+    radii     = [2, 4, 6, 8, 10, 16, 32] # possible radii of blobs
+    radindx   = 5                        # blob-radius index at startup
+    colors    = [BLACK, WHITE]
+    colindx   = 0
 
-filepath  = '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house/'
-filename  = '2022_0128_104425_003.MP4'
-scale     = 1.0 # scale later after mask has been made
-ymin      =  10 # min image pixel value, used for mask thresholding
-ymax      = 250 # max image pixel value, used for mask thrsholding
-radii     = [2, 4, 6, 8, 10, 16, 32] # possible radii of blobs
-radindx   = 0
+    snapshot_name = filepath + videoname + '.snapshot.jpg'  # frame on which to build mask
+    mask_name     = filepath + videoname + '.mask.jpg'      # mask name
 
-color     = BLACK  #YELLOW # color of mask
+    # draw mask on full size image: scale = 1:
+    # much easier for user-defined mask delineation
+    size, frame = get_frame(filepath + videoname, scale=scale, ymin=ymin, ymax=ymax)
 
-# draw mask on full size imageL scale = 1
-size, frame = get_frame(filepath + filename, scale=scale, ymin=ymin)
+    #print('\nmin, max of grayscale image: {}, {}\n'.\
+    #     format(np.min(frame), np.max(frame)))
 
-cv2.imwrite(imname, frame)
+    cv2.imwrite(snapshot_name, frame)
 
-print('\nmin, max of grayscale image: {}, {}\n'.\
-      format(np.min(frame), np.max(frame)))
+    # don't use resizable frame at present: image is not resized
+    screen  = pg.display.set_mode(size) # , flags=pg.RESIZABLE)
+    myimage = pg.image.load(snapshot_name).convert()
 
-# don't use resizable frame at present: image is not resized
-screen  = pg.display.set_mode(size) # , flags=pg.RESIZABLE)
-myimage = pg.image.load(imname).convert()
+    screen.blit(myimage, (0, 0))
 
-screen.blit(myimage, (0, 0))
+    txt =  '\n\n************************\n'
+    txt += 'mouse-down and drag to draw mask blobs\n'
+    txt += 'up-arrow            to cycle thru blob sizes\n'
+    txt += 'u                   to undo mask area with white erasure\n'
+    txt += 'u again             to toggle back into mask mode'
+    txt += 'backspace           to clear mask\n'
+    txt += 's                   to save mask\n'
+    txt += 'q or "close window" at upper right to quit\n'
+    txt +=  '************************\n\n'
+    print(txt)
 
-isPressed = False
-run = True
-while run:
+    isPressed   = False
+    keep_moving = True
+    while keep_moving:
 
-    for event in pg.event.get():
+        for event in pg.event.get():
 
-        if event.type == pg.MOUSEBUTTONDOWN:
-            isPressed = True
-        elif event.type == pg.MOUSEBUTTONUP:
-            isPressed = False
-        elif event.type == pg.MOUSEMOTION and isPressed:
-            x, y = pg.mouse.get_pos()
-            drawCirc(screen, x, y, rad=radii[radindx], color=color)
-        elif event.type == pg.KEYDOWN:
-            if event.key == pg.K_BACKSPACE: # backspace to clear mask
-                screen.blit(myimage, (0,0))
-            if event.key == pg.K_s:  # s to save mask
-                print('saving mask to {}'.format(maskname))
-                pg.image.save(screen, maskname)
-            if event.key == pg.K_UP: # arrow up to cycle thru blob radii
-                radindx += 1
-                radindx = radindx % len(radii)
-                print('blob radius is now {}'.format(radii[radindx]))
-            if event.key == pg.K_q:  # q to quit
-                run = False
+            if event.type == pg.MOUSEBUTTONDOWN:
+                isPressed = True
+            elif event.type == pg.MOUSEBUTTONUP:
+                isPressed = False
+            elif event.type == pg.MOUSEMOTION and isPressed:
+                x, y = pg.mouse.get_pos()
+                drawCirc(screen, x, y, rad=radii[radindx], color=colors[colindx])
 
-        if event.type == pg.QUIT: # hit 'X' in upper-right menu to quit
-            run = False
+            elif event.type == pg.KEYDOWN:
+                if event.key == pg.K_BACKSPACE: # backspace to clear mask
+                    screen.blit(myimage, (0,0))
+                if event.key == pg.K_s:  # s to save mask
+                    print('saving mask to {}'.format(mask_name))
+                    pg.image.save(screen, mask_name)
+                if event.key == pg.K_UP: # arrow up to cycle thru blob radii
+                    radindx += 1
+                    radindx = radindx % len(radii)
+                    print('blob radius is now {}'.format(radii[radindx]))
+                if event.key == pg.K_u:
+                    colindx += 1
+                    colindx = colindx % len(colors)
+                    print('toggling between masking and unmasking')
+                if event.key == pg.K_q:  # q to quit
+                    keep_moving = False
 
-    pg.display.flip()
+            if event.type == pg.QUIT: # hit 'X' in upper-right menu to quit
+                keep_moving = False
+
+        pg.display.flip()
+
+    pg.quit()
+
+    print('\npyGame gently quit...\n')
+
+    mask = cv2.imread(mask_name, 0) # 0 means read as grayscale
+
+    ret, mask = cv2.threshold(mask, 1, 255, cv2.THRESH_BINARY)
+
+    mask = cv2.erode(mask,  None, iterations=3)
+    mask = cv2.dilate(mask, None, iterations=3)
+
+    print('\nmin, max of mask image: {}, {}\n'.\
+          format(np.min(mask), np.max(mask)))
+
+    while True:
+        cv2.imshow('mask', mask)
+        if cv2.waitKey(1) == ord('q'):
+                            break
+
+    print('writing {}'.format(mask_name))
+
+    cv2.imwrite(mask_name, mask)
 
 
-print('\npyGame gently quit...\n')
+if __name__=='__main__':
 
-pg.quit()
+    filepath   = '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house/2022_0128/'
+    videoname  = '2022_0128_104425_003.MP4'  #  01/28/22 was a very windy day
 
-mask = cv2.imread(maskname, 0) # 0 means read as grayscale
-
-ret, mask = cv2.threshold(mask, 1, 255, cv2.THRESH_BINARY)
-
-mask = cv2.erode(mask,  None, iterations=3)
-mask = cv2.dilate(mask, None, iterations=3)
-
-print('\nmin, max of mask image: {}, {}\n'.\
-      format(np.min(mask), np.max(mask)))
-
-while True:
-    cv2.imshow('mask', mask)
-    if cv2.waitKey(1) == ord('q'):
-                        break
-
-print('writing {}'.format(maskname))
-
-cv2.imwrite(maskname, mask)
+    run(filepath, videoname)
