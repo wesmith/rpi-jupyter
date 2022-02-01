@@ -96,7 +96,7 @@ class VideoOutput():
 class VideoProcess():
 
     def __init__(self, filepath, names, skip, row_frac, col_frac,
-                 fps, scale, base, 
+                 fps, scale, base, maskpath=None,
                  framecount=15, blur_size=3, t_val=5, alpha=0.2, frameshow=False):
         '''
         INPUT VIDEOS
@@ -110,6 +110,7 @@ class VideoProcess():
          scale:
          base:
         PROCESSING PARAMS
+         maskpath:    full path to the motion-ignore mask
          framecount:
          blur_size:
          t_val:
@@ -123,6 +124,7 @@ class VideoProcess():
         self.framecount = framecount
         self.t_val      = t_val
         self.frameshow  = frameshow
+        self.mask       = None
 
         self.md         = MotionDetector(alpha=alpha)
 
@@ -147,6 +149,12 @@ class VideoProcess():
     
         self.row_mask = int(row_frac * self.height)
         self.col_mask = int(col_frac * self.width)
+
+        # rescale mask if it is input
+        if maskpath is not None:
+            mask = cv2.imread(maskpath, 0) # 0 means read as grayscale
+            self.mask = cv2.resize(mask, (self.width, self.height),
+                                   interpolation=cv2.INTER_NEAREST)
 
         print('\nNew Video Dimensions: {} x {}'.format(self.width, self.height))
 
@@ -184,10 +192,23 @@ class VideoProcess():
                                    interpolation=cv2.INTER_LINEAR)
 
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
                 gray = cv2.GaussianBlur(gray, 
                                         (self.blur_size, self.blur_size), 0)
 
-                gray[self.row_mask:, 0:self.col_mask] = 0  # mask out changing timestamp
+                # if motion-ignore mask is input, it has already been resized
+                if self.mask is not None:
+                    #gray = cv2.bitwise_and(gray, gray, mask=self.mask)
+                    gray = cv2.bitwise_and(gray, self.mask) # this is a better result
+
+                    # diagnostic check on the masking: remove before flight
+                    #while True:
+                    #   cv2.imshow('masked', gray)
+                    #   if cv2.waitKey(1) == ord('q'):
+                    #       break
+
+                # mask out timestamp: this may be redundant if mask already masks this
+                gray[self.row_mask:, 0:self.col_mask] = 0
 
                 if total > self.framecount:
 
@@ -223,7 +244,7 @@ class VideoProcess():
 if __name__=='__main__':
     
     
-    filepath  = '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house/'
+    filepath  = '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house/2022_0127/'
 
     #filenames = ('2022_0126_150004_088.MP4', '2022_0126_150304_089.MP4')
     '''
@@ -237,10 +258,20 @@ if __name__=='__main__':
                 ('2022_0128_164128_122.MP4', ''),
                 ('2022_0128_174127_142.MP4', ''))
     '''
+    filebase = '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house/'
+
+    data_2022_0128 = {'filepath':'2022_0128/',
+                      'mask': 'masks/2022_0128_104425_003.MP4.mask_2022_0131_203422.jpg',
+                      'desc': 'very windy day!',
+                      'beg': '2022_0128_104124_002.MP4',
+                      'end': '2022_0128_183827_161.MP4'}
+
     # use below sequences to train: very windy, and lots of people, dogs, cars
     #filenames = ('2022_0128_104425_003.MP4', '2022_0128_104725_004.MP4') # very windy: short
+    #maskpath  = filepath + 'masks/2022_0128_104425_003.MP4.mask_2022_0131_203422.jpg'
     #filenames = ('2022_0128_104425_003.MP4', '2022_0128_105625_007.MP4') # very windy: longer
     filenames = ('2022_0127_160144_270.MP4', '2022_0127_163143_280.MP4') # people, dogs, cars
+    maskpath  = None
 
     # change-detection parameters
     skip       =  30  # overlap frames between end of one video and beginning of next
@@ -250,14 +281,14 @@ if __name__=='__main__':
     scale      =  0.5 # scale for processing and final video size
     base       = 'results'
     framecount = 15   # background frames to get before motion detection starts (minor param)
-    blur_size  = 15   # background blur
-    t_val      = 10   # threshold for detection: probably the most sensitive parameter
+    blur_size  = 3   # background blur
+    t_val      = 5   # threshold for detection: probably the most sensitive parameter
     alpha      =  0.5 # weighting between current frame and background: float between 0 and 1
                       # the higher it is, the more the background looks like the current frame
     frameshow  = False # True shows frames as they are processed, but it slows things down
 
     vp = VideoProcess(filepath, filenames, skip, row_frac, col_frac,
-                        fps, scale, base, 
+                        fps, scale, base, maskpath=maskpath,
                         framecount=framecount, blur_size=blur_size,
                         t_val=t_val, alpha=alpha, frameshow=frameshow)
     t0 = time()
