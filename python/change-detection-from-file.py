@@ -100,7 +100,7 @@ class VideoOutput():
 class VideoProcess():
 
     def __init__(self, datadict, num, skip, row_frac, col_frac,
-                 fps, scale, base,
+                 fps, scale,
                  framecount=15, blur_size=3, t_val=5, alpha=0.2, frameshow=False):
         '''
         INPUT VIDEOS
@@ -108,28 +108,30 @@ class VideoProcess():
          datadict['subdir']:  str: subdirectory to video files
          datadict['range']:   tuple of str: (starting_videofile_name, ending_videofile_name)
          datadict['mask']:    str: path and name of motion-ignore mask used; 'None' if no mask
+         datadict['base']:    str: full or relative path to where video results are stored
          datadict['desc']:    str: brief description of day (eg, calm, windy, raining, etc.)
-         num:                 int: number of input videos to process per output motion-detect video
-         skip:                int: number of overlap frames if there is overlap between 
-                              consecutive videos
-         row_frac:
-         col_frac:
+         num:                 int: number of input vids to process per output motion-detect vid
+         skip:                int: num of overlap frames if overlap exists between consecutive vids
+         row_frac:            float: 0 to 1, mask out timestamp rows (eg, 0.9 to mask out lower 10%)
+         col_frac:            float: 0 to 1, mask out timestamp cols (eg, 0.3 to mask out left  30%)
+                              (taken together, a rectangle in the lower-left frame will be masked)
         OUTPUT VIDEO
-         fps:
-         scale:
-         base:               str: full or relative path to where video results are stored
+         fps:                 int: frames/sec for final video of detected motion
+         scale:               float: scale for processing size and final video size (eg, 0.5)
+
         PROCESSING PARAMS
-         framecount:
-         blur_size:
-         t_val:
-         alpha:
-         frameshow:
+         framecount:          int: num of background frames to get before motion detection starts
+         blur_size:           int: blur kernel size: blur_size x blur_size
+         t_val:               int: threshold for detection: probably the most critical parameter re: Pd vs FA
+         alpha:               float: 0 to 1, weighting between current frame and background:
+                              the higher alpha, the more the background looks like the current frame
+         frameshow:           boolean: True shows frames as they are processed, but it slows processing
         '''
-        self.filepath   = datadict['basedir'] + datadict['subdir']
+        self.filepath   = os.path.join(datadict['basedir'], datadict['subdir'])
         self.filenames  = get_file_list(self.filepath, datadict['range'], num)
         self.skip       = skip
         self.blur_size  = blur_size
-        self.base       = base
+        self.base       = datadict['base']
         self.framecount = framecount
         self.t_val      = t_val
         self.frameshow  = frameshow
@@ -137,15 +139,15 @@ class VideoProcess():
 
         self.md         = MotionDetector(alpha=alpha)
 
-        fullpath = self.filepath + self.filenames[0][0] # first video (filenames now a list of lists)
+        fullpath = os.path.join(self.filepath, self.filenames[0][0]) # first video (filenames now a list of lists)
         vid      = cv2.VideoCapture(fullpath)
         
         ret, frame = vid.read() # first frame to get frame size
         
         if not ret:
-            print("Can't receive frame (stream end?). Exiting ...")
+            print("Can't receive video frame. Exiting ...")
             vid.release()
-            sys.exit(0)
+            sys.exit()
             
         vid.release()
 
@@ -162,7 +164,7 @@ class VideoProcess():
 
         # rescale mask if it is input
         if datadict['mask'] is not None:
-            maskpath = self.filepath + datadict['mask']
+            maskpath = os.path.join(self.filepath, datadict['mask'])
             mask = cv2.imread(maskpath, 0) # 0 means read as grayscale
             self.mask = cv2.resize(mask, (self.width, self.height),
                                    interpolation=cv2.INTER_NEAREST)
@@ -170,30 +172,30 @@ class VideoProcess():
         print('\nNew Video Dimensions: {} x {}'.format(self.width, self.height))
 
         self.video_out = VideoOutput(self.width, self.height, fps)
-        '''
-        savenam = '{}/{}-{}.mp4'.\
-                  format(base, self.filenames[0][0:16], self.filenames[-1][5:16])
-        fourcc   = cv2.VideoWriter_fourcc(*'mp4v')
-        self.out = cv2.VideoWriter(savenam, fourcc, fps, 
-                                   (self.width, self.height))
-        '''
- 
+
+
     def run(self):
         
         total = 0  # total frame count over all video files
+        if not os.path.exists(self.base):
+            os.makedirs(self.base)
+            print('\nCreated output directory {}\n'.format(self.base))
         
         # loop over video groups: one motion-detect video produced per group
         for video_group in self.filenames:
             
             # create new video capture object here
-            savenam = '{}/{}-{}.mp4'.\
-                      format(self.base, video_group[0][0:16], video_group[-1][5:16])
+            savenam = '{}-{}.mp4'.\
+                      format(video_group[0][0:16], video_group[-1][5:16])
+            savenam = os.path.join(self.base, savenam)
+
+            print('\nNext file to save: {}\n'.format(savenam))
             new_video_out = self.video_out.new_writer(savenam)
 
             # loop over videos within a group
             for input_video in video_group:
 
-                fullpath = self.filepath + input_video
+                fullpath = os.path.join(self.filepath, input_video)
                 vid      = cv2.VideoCapture(fullpath)
                 count    = 0  # initialize skip count    
 
@@ -241,7 +243,6 @@ class VideoProcess():
                             cv2.rectangle(frame, (minX, minY), (maxX, maxY), (0, 255, 255), 1)
 
                             # write new video file with just the frames with motion
-                            #self.out.write(frame)
                             new_video_out.write(frame)
 
                     self.md.update_background(gray)
@@ -273,26 +274,35 @@ class VideoProcess():
 
 if __name__=='__main__':
 
-    data_2022_0128 = {'basedir': '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house/',
-                      'subdir':  '2022_0128/',
-                      'mask':    'masks/2022_0128_104425_003.MP4.mask_2022_0131_203422.jpg',
-                      'desc':    'very windy day!',
-                      'range':   ('2022_0128_104425_003.MP4', '2022_0128_134129_062.MP4')}
+    data_2022_0128 = {'basedir': '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house',
+                      'subdir':  '2022_0128',
+                      'mask':    'masks/2022_0128_104425_003.MP4.mask_2022_0201_212059.jpg',
+                      'desc':    'very windy day! needs a mask',
+                      'range':   ('2022_0128_104425_003.MP4', '2022_0128_183227_159.MP4'),
+                      'base':    'results/2022-0128'}
 
-    data_2022_0131 = {'basedir': '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house/',
-                      'subdir':  '2022_0131/',
+    data_2022_0130 = {'basedir': '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house',
+                      'subdir':  '2022_0130',
                       'mask':    None,
-                      'desc':    '',
-                      'range':   ('2022_0131_115846_353.MP4', '2022_0131_145549_412.MP4')}
+                      'desc':    'moderately windy: needs a mask',
+                      'range':   ('2022_0130_095940_173.MP4', '2022_0130_181743_339.MP4'),
+                      'base':    'results/2022-0130'}
 
+    data_2022_0131 = {'basedir': '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house',
+                      'subdir':  '2022_0131',
+                      'mask':    None,
+                      'desc':    'calm',
+                      'old_range':   ('2022_0131_115846_353.MP4', '2022_0131_145549_412.MP4'),
+                      'range':   ('2022_0131_145849_413.MP4', '2022_0131_181648_479.MP4')}
 
-    # use below sequences to train: very windy, and lots of people, dogs, cars
-    #filenames = ('2022_0128_104425_003.MP4', '2022_0128_104725_004.MP4') # very windy: short
-    #maskpath  = filepath + 'masks/2022_0128_104425_003.MP4.mask_2022_0131_203422.jpg'
-    #filenames = ('2022_0128_104425_003.MP4', '2022_0128_105625_007.MP4') # very windy: longer
-    #filenames = ('2022_0127_160144_270.MP4', '2022_0127_163143_280.MP4') # people, dogs, cars
+    data_2022_0201 = {'basedir': '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house',
+                      'subdir':  '2022_0201',
+                      'mask':    None,
+                      'desc':    'calm',
+                      'range':   ('2022_0201_095506_492.MP4', '2022_0201_181907_660.MP4'),
+                      'base':    'results/2022-0201'}
 
-    data = data_2022_0131
+    data = data_2022_0201
     # change-detection parameters
     num        =  20  # number of input videos to process per output motion-detect video
     skip       =  30  # overlap frames between end of one video and beginning of next
@@ -300,7 +310,7 @@ if __name__=='__main__':
     col_frac   =  0.3
     fps        = 30   # frames/sec for final video of detected change
     scale      =  0.5 # scale for processing and final video size
-    base       = 'results'
+    base       = data['base']
     framecount = 15   # background frames to get before motion detection starts (minor param)
     blur_size  = 3   # background blur
     t_val      = 5   # threshold for detection: probably the most sensitive parameter
@@ -308,7 +318,7 @@ if __name__=='__main__':
                       # the higher it is, the more the background looks like the current frame
     frameshow  = False # True shows frames as they are processed, but it slows things down
 
-    vp = VideoProcess(data, num, skip, row_frac, col_frac, fps, scale, base,
+    vp = VideoProcess(data, num, skip, row_frac, col_frac, fps, scale,
                       framecount=framecount, blur_size=blur_size,
                       t_val=t_val, alpha=alpha, frameshow=frameshow)
     
