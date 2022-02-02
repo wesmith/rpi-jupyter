@@ -272,23 +272,29 @@ class VideoProcess():
 
 
 if __name__=='__main__':
-    
+
     data_2022_0128 = {'basedir': '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house/',
                       'subdir':  '2022_0128/',
                       'mask':    'masks/2022_0128_104425_003.MP4.mask_2022_0131_203422.jpg',
                       'desc':    'very windy day!',
-                      'range':   ('2022_0128_104124_002.MP4', '2022_0128_110225_009.MP4')}
-                      #'range':   ('2022_0128_104124_002.MP4', '2022_0128_183827_161.MP4')}
+                      'range':   ('2022_0128_104425_003.MP4', '2022_0128_134129_062.MP4')}
+
+    data_2022_0131 = {'basedir': '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house/',
+                      'subdir':  '2022_0131/',
+                      'mask':    None,
+                      'desc':    '',
+                      'range':   ('2022_0131_115846_353.MP4', '2022_0131_145549_412.MP4')}
+
 
     # use below sequences to train: very windy, and lots of people, dogs, cars
     #filenames = ('2022_0128_104425_003.MP4', '2022_0128_104725_004.MP4') # very windy: short
     #maskpath  = filepath + 'masks/2022_0128_104425_003.MP4.mask_2022_0131_203422.jpg'
     #filenames = ('2022_0128_104425_003.MP4', '2022_0128_105625_007.MP4') # very windy: longer
-    filenames = ('2022_0127_160144_270.MP4', '2022_0127_163143_280.MP4') # people, dogs, cars
-    maskpath  = None
+    #filenames = ('2022_0127_160144_270.MP4', '2022_0127_163143_280.MP4') # people, dogs, cars
 
+    data = data_2022_0131
     # change-detection parameters
-    num        =  3  # number of input videos to process per output motion-detect video
+    num        =  20  # number of input videos to process per output motion-detect video
     skip       =  30  # overlap frames between end of one video and beginning of next
     row_frac   =  0.9 # values to mask out changing timestamp in lower-left corner
     col_frac   =  0.3
@@ -302,10 +308,9 @@ if __name__=='__main__':
                       # the higher it is, the more the background looks like the current frame
     frameshow  = False # True shows frames as they are processed, but it slows things down
 
-    vp = VideoProcess(data_2022_0128, num, skip, row_frac, col_frac,
-                        fps, scale, base,
-                        framecount=framecount, blur_size=blur_size,
-                        t_val=t_val, alpha=alpha, frameshow=frameshow)
+    vp = VideoProcess(data, num, skip, row_frac, col_frac, fps, scale, base,
+                      framecount=framecount, blur_size=blur_size,
+                      t_val=t_val, alpha=alpha, frameshow=frameshow)
     
     dd = vp.get_filelist()
     for j in dd:
