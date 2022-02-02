@@ -176,8 +176,10 @@ if __name__=='__main__':
     filepath   = '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house/2022_0128/'
     videoname  = '2022_0128_104425_003.MP4'  #  01/28/22 was a very windy day
 
-    fixme = None
-    fixme = '2022_0128_104425_003.MP4.mask_2022_0131_182522.jpg' # mask to be modified
+    #fixme = None
+    #fixme = '2022_0128_104425_003.MP4.mask_2022_0131_182522.jpg' # mask to be modified
+    fixme = '2022_0128_104425_003.MP4.mask_2022_0131_203422.jpg'
+
     fixme = filepath + 'masks/' + fixme  # must be full path
 
     run(filepath, videoname, fixme=fixme)
