@@ -8,7 +8,7 @@
 import pygame as pg
 import cv2
 import numpy as np
-import sys
+import os, sys
 from datetime import datetime
 
 
@@ -78,20 +78,20 @@ def run(filepath, videoname, fixme=None, scale=1.0, ymin=10, ymax=250, color=BLA
     colindx   = 0
 
     # snapshot is the video frame on which to build the mask
-    maskpath      = filepath + 'masks/'
-    snapshot_name = maskpath + videoname + '.snapshot.jpg'
+    maskpath      = os.path.join(filepath, 'masks')
+    if not os.path.exists(maskpath): os.makedirs(maskpath)
+    snapshot_name = os.path.join(maskpath,  videoname + '.snapshot.jpg')
     mask_name     = '.mask_{:%Y_%m%d_%H%M%S}.jpg'.format(datetime.now())
-    mask_name     = maskpath + videoname + mask_name
+    mask_name     = os.path.join(maskpath,  videoname + mask_name)
 
     # draw mask on full size image: scale = 1:
     # much easier for user-defined mask delineation
-    size, frame = get_frame(filepath + videoname, scale=scale, ymin=ymin, ymax=ymax)
-
+    size, frame = get_frame(os.path.join(filepath, videoname),
+                            scale=scale, ymin=ymin, ymax=ymax)
     if fixme is not None:
         old_mask = cv2.imread(fixme, 0)
         frame    = cv2.bitwise_and(frame, old_mask)
         snapshot_name += '.used_in_fixme.jpg'
-
     cv2.imwrite(snapshot_name, frame)
 
     # don't use resizable frame at present: image is not resized
@@ -173,13 +173,13 @@ def run(filepath, videoname, fixme=None, scale=1.0, ymin=10, ymax=250, color=BLA
 
 if __name__=='__main__':
 
-    filepath   = '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house/2022_0128/'
-    videoname  = '2022_0128_104425_003.MP4'  #  01/28/22 was a very windy day
+    filepath   = '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house/2022_0202'
+    videoname  = '2022_0202_150243_761.MP4'
 
-    #fixme = None
+    fixme = None
     #fixme = '2022_0128_104425_003.MP4.mask_2022_0131_182522.jpg' # mask to be modified
-    fixme = '2022_0128_104425_003.MP4.mask_2022_0131_203422.jpg'
+    #fixme = '2022_0128_104425_003.MP4.mask_2022_0131_203422.jpg'
 
-    fixme = filepath + 'masks/' + fixme  # must be full path
+    #fixme = filepath + 'masks/' + fixme  # must be full path
 
     run(filepath, videoname, fixme=fixme)
