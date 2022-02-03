@@ -1,5 +1,5 @@
 #! /home/smithw/.tensorflow2/bin/python
-# use python in (TF2) venv: opencv installed there
+# use python in (TF2) venv on acer: opencv installed there
 
 # change-detection-from-file.py
 # WESmith 01/27/22
@@ -102,26 +102,26 @@ class VideoProcess():
     def __init__(self, data, para):
         '''
         INPUT VIDEOS: the information below is relevant to the input videos to be processed
-         data['basedir']:     str: full path to base directory of video files
-         data['subdir']:      str: subdirectory to input video files: ALSO used for 'resdir' subdir
-         data['proc_range']:  tuple of str: (starting_video_name, ending_video_name)
-         data['mask']:        str: path and name of motion-ignore mask used; 'None' if no mask
-         data['resdir']:      str: full or relative base path to where video results are to be stored
-         data['desc']:        str: brief description of day (eg, calm, windy, raining, etc.)
-         data['fps_of_vid']   int: frames/sec of input vids: output vids' fps are set to this
-         data['sec_per_vid']  int: seconds per video of the input vids
-         data['num']:         int: number of input vids to process per output motion-detect vid
-         data['skip']:        int: num of overlap frames if overlap exists between consecutive vids
-         data['row_frac']:    float: 0 to 1, mask out timestamp rows (eg, 0.9 to mask out lower 10%)
-         data['col_frac']:    float: 0 to 1, mask out timestamp cols (eg, 0.3 to mask out left  30%)
-                              (taken together, a rectangle in the lower-left frame would be masked)
+         data['basedir']:    str: full path to base directory of video files
+         data['subdir']:     str: subdirectory to input video files: ALSO used for 'resdir' subdir
+         data['proc_range']: tuple of str: (starting_video_name, ending_video_name)
+         data['mask']:       str: path and name of motion-ignore mask used; 'None' if no mask
+         data['resdir']:     str: full or relative base path to where video results are to be stored
+         data['desc']:       str: brief description of day (eg, calm, windy, raining, etc.)
+         data['fps_of_vid']  int: frames/sec of input vids: output vids' fps are set to this
+         data['sec_per_vid'] int: seconds per video of the input vids
+         data['num']:        int: number of input vids to process per output motion-detect vid
+         data['skip']:       int: num of overlap frames if overlap exists between consecutive vids
+         data['row_frac']:   float: 0 to 1, mask out timestamp rows (eg, 0.9 to mask out lower 10%)
+         data['col_frac']:   float: 0 to 1, mask out timestamp cols (eg, 0.3 to mask out left  30%)
+                             (taken together, a rectangle in the lower-left frame would be masked)
         PROCESSING PARAMS
-         para['scale']        float: scale for processing size and final video size (eg, 0.5)
-         para['framecount']:  int: num of background frames to get before motion detection starts
-         para['blur_size']:   int: blur kernel size: blur_size x blur_size
-         para['t_val']:       int: threshold for detection: probably the most critical parameter re: Pd vs FA
-         para['alpha']:       float: 0 to 1; backgrnd = (1 - alpha) * backgrnd + alpha * current_frame
-         para['frameshow']:   boolean: True shows frames as they are processed, but it slows processing
+         para['scale']       float: scale for processing size and final video size (eg, 0.5)
+         para['framecount']: int: num of background frames to get before motion detection starts
+         para['blur_size']:  int: blur kernel size: blur_size x blur_size
+         para['t_val']:      int: thresh for detection: a critical parameter re: Pd vs FA
+         para['alpha']:      float: 0 to 1; backgrnd = (1 - alpha) * backgrnd + alpha * new_frame
+         para['frameshow']:  boolean: True shows frames as they are processed, but it is slow
         '''
         self.filepath   = os.path.join(data['basedir'], data['subdir'])
         self.filenames  = get_file_list(self.filepath, data['proc_range'], data['num'])
@@ -172,6 +172,7 @@ class VideoProcess():
 
     def run(self):
         
+        t0    = time()
         total = 0  # total frame count over all video files
         if not os.path.exists(self.base):
             os.makedirs(self.base)
@@ -203,7 +204,8 @@ class VideoProcess():
                     if not ret:
                         break  # end of input video file
 
-                    # skip over redundant frames at beginning of video splice if overlap exists
+                    # skip over redundant frames at beginning of video splice
+                    # if overlap exists
                     if count < self.skip:
                         count += 1
                         continue
@@ -236,7 +238,8 @@ class VideoProcess():
 
                         if motion is not None:
                             (thresh, (minX, minY, maxX, maxY)) = motion
-                            cv2.rectangle(frame, (minX, minY), (maxX, maxY), (0, 255, 255), 1)
+                            cv2.rectangle(frame, (minX, minY), (maxX, maxY),
+                                          (0, 255, 255), 1)
 
                             # write new video file with just the frames with motion
                             new_video_out.write(frame)
@@ -254,56 +257,28 @@ class VideoProcess():
             # release the output video object for this pass of the loop
             new_video_out.release()
 
+        dt = time() - t0
         self.cleanup()
         
-        return total  # total frames processed
+        return total, dt  # total frames processed, time (seconds) to process
 
 
     def cleanup(self):
         cv2.destroyAllWindows()
 
 
-    def get_filelist(self):
+    def show_filelist(self):
+        print('\nFiles to be processed and their grouping:')
+        for j in self.filenames:
+            print()
+            for k in j:
+                print(k)
+        print()
         self.cleanup()
-        return self.filenames
+
 
 
 if __name__=='__main__':
-
-    data_2022_0128 = {'basedir': '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house',
-                      'subdir':  '2022_0128',
-                      'mask':    'masks/2022_0128_104425_003.MP4.mask_2022_0201_212059.jpg',
-                      'desc':    'very windy day! needs a mask',
-                      'proc_range':   ('2022_0128_104425_003.MP4', '2022_0128_183227_159.MP4'),
-                      'resdir':   'results'}
-
-    data_2022_0130 = {'basedir': '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house',
-                      'subdir':  '2022_0130',
-                      'mask':    None,
-                      'desc':    'moderately windy: needs a mask',
-                      'proc_range':   ('2022_0130_095940_173.MP4', '2022_0130_181743_339.MP4'),
-                      'resdir':   'results'}
-
-    data_2022_0131 = {'basedir': '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house',
-                      'subdir':  '2022_0131',
-                      'mask':    None,
-                      'desc':    'calm',
-                      'old_range':   ('2022_0131_115846_353.MP4', '2022_0131_145549_412.MP4'),
-                      'proc_range':   ('2022_0131_145849_413.MP4', '2022_0131_181648_479.MP4')}
-
-    data_2022_0201 = {'basedir':           '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house',
-                      'subdir':             '2022_0201',
-                      'proc_range':   ('2022_0201_095506_492.MP4', '2022_0201_181907_660.MP4'),
-                      'resdir':              'results',
-                      'desc':               'calm day',
-                      'mask':               None,
-                      'fps_of_vid':         30,
-                      'sec_per_vid':        180,
-                      'num':                20,
-                      'skip':               30,
-                      'row_frac':           0.9,
-                      'col_frac':           0.3}
-
 
 
     test_wi_mask  =  {'basedir':     '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house',
@@ -342,20 +317,13 @@ if __name__=='__main__':
 
     data   = test_wi_mask
     params = params_default
+
     vp     = VideoProcess(data, params)
     
     # show videos to be processed and their groupings
-    dd = vp.get_filelist()
-    for j in dd:
-        print()
-        for k in j:
-            print(k)
+    vp.show_filelist()
 
-    t0 = time()
+    total, dt = vp.run()
 
-    total = vp.run()
-
-    dt = time() - t0
-
-    print('\n{} seconds ({} minutes) to process {} total frames, or {} frames/sec\n'.\
+    print('\n{:0.2f} sec ({:0.2f} min) to process {} frames, or {:0.2f} frames/sec\n'.\
           format(dt, dt/60., total, total/dt))
