@@ -9,6 +9,8 @@ import change_detection_from_file as cd
 
 
 '''
+# these inputs are an older format: need updating
+
 data_2022_0128 = {'basedir': '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house',
                   'subdir':  '2022_0128',
                   'mask':    'masks/2022_0128_104425_003.MP4.mask_2022_0201_212059.jpg',
@@ -31,25 +33,38 @@ data_2022_0131 = {'basedir': '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house
                   'proc_range':   ('2022_0131_145849_413.MP4', '2022_0131_181648_479.MP4')}
 '''
 
-data_2022_0201 = {'basedir':           '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house',
-                  'subdir':             '2022_0201',
+data_2022_0201 = {'basedir':      '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house',
+                  'subdir':       '2022_0201',
                   'proc_range':   ('2022_0201_095506_492.MP4', '2022_0201_181907_660.MP4'),
-                  'resdir':              'results',
-                  'desc':               'calm day',
-                  'mask':               None,
-                  'fps_of_vid':         30,
-                  'sec_per_vid':        180,
-                  'num':                20,
-                  'skip':               30,
-                  'row_frac':           0.9,
-                  'col_frac':           0.3}
+                  'resdir':       '/home/smithw/Devel/raspberry_pi/rpi-jupyter/results',
+                  'desc':         'calm day',
+                  'mask':         None,
+                  'fps_of_vid':   30,
+                  'sec_per_vid':  180,
+                  'num':          20,
+                  'skip':         30,
+                  'row_frac':     0.9,
+                  'col_frac':     0.3}
 
-data_2022_0202  = {'basedir':      '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house',
+data_2022_0202  = {'basedir':     '/media/smithw/SEAGATE-FAT/dashcam/Movie',
                   'subdir':       '2022_0202',
                   'proc_range':   ('2022_0202_101439_665.MP4', '2022_0202_182042_827.MP4'),
-                  'resdir':       'results',
+                  'resdir':       '/home/smithw/Devel/raspberry_pi/rpi-jupyter/results',
                   'desc':         'windy day: needs a mask',
                   'mask':         'masks/2022_0202_150243_761.MP4.mask_2022_0202_211605.jpg',
+                  'fps_of_vid':   30,
+                  'sec_per_vid':  180,
+                  'num':          20,
+                  'skip':         30,
+                  'row_frac':     0.9,
+                  'col_frac':     0.3}
+
+data_2022_0203  = {'basedir':     '/media/smithw/SEAGATE-FAT/dashcam/Movie',
+                  'subdir':       '2022_0203',
+                  'proc_range':   ('2022_0203_095311_832.MP4', '2022_0203_183214_006.MP4'),
+                  'resdir':       '/home/smithw/Devel/raspberry_pi/rpi-jupyter/results',
+                  'desc':         'slight wind: use a mask',
+                  'mask':         'masks/2022_0203_150214_935.MP4.mask_2022_0203_202920.jpg',
                   'fps_of_vid':   30,
                   'sec_per_vid':  180,
                   'num':          20,
@@ -65,7 +80,7 @@ params_default = {'scale':        0.5,
                   'alpha':        0.5,
                   'frameshow':    False}
 
-data   = data_2022_0202
+data   = data_2022_0203
 params = params_default
 
 vp = cd.VideoProcess(data, params)

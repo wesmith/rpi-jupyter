@@ -173,11 +173,12 @@ def run(filepath, videoname, fixme=None, scale=1.0, ymin=10, ymax=250, color=BLA
 
 if __name__=='__main__':
 
-    filepath   = '/media/smithw/SEAGATE-FAT/dashcam/Movie/from_house/2022_0202'
-    videoname  = '2022_0202_150243_761.MP4'
+    filepath   = '/media/smithw/SEAGATE-FAT/dashcam/Movie/2022_0203'
+    videoname  = '2022_0203_150214_935.MP4'
 
     fixme = None
-    #fixme = '2022_0128_104425_003.MP4.mask_2022_0131_182522.jpg' # mask to be modified
+    # mask to be modified
+    #fixme = '2022_0128_104425_003.MP4.mask_2022_0131_182522.jpg'
     #fixme = '2022_0128_104425_003.MP4.mask_2022_0131_203422.jpg'
 
     #fixme = filepath + 'masks/' + fixme  # must be full path
