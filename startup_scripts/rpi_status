@@ -15,7 +15,7 @@ export HOME
 case "$1" in
   start)
     echo "Starting rpi_status server on port 90"
-    sudo /home/pi/Devel/raspberry_pi/rpi-jupyter/python/rpi_status.py 90 2>&1 &
+    sudo /home/pi/Devel/raspberry_pi/rpi-jupyter/python_on_rpi/rpi_status.py 90 2>&1 &
   ;;
   stop)
     PID=`ps auxwww | grep rpi_status.py | head -1 | awk '{print $2}'`
@@ -28,4 +28,3 @@ case "$1" in
   ;;
 esac
 exit 0
-  
